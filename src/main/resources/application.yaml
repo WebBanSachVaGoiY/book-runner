@@ -30,7 +30,7 @@ spring:
 # App-specific parameters
 app:
   jwt:
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET}
     expiration-ms: 86400000 # 24 hours
     refresh-expiration-ms: 604800000 # 7 days
   recsys:
