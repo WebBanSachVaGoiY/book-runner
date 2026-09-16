@@ -62,4 +62,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> findBestSellers(Pageable pageable);
 
     List<Book> findAllByIdInAndActiveTrue(List<Long> ids);
+
+    void deleteByIdIn(List<Long> ids);
 }
