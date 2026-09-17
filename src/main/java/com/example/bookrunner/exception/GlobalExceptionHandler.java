@@ -11,11 +11,11 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    //Exception mã định danh sách bị trùng
-    @ExceptionHandler(DuplicateIsbnException.class)
-    public ResponseEntity<Map<String, Object>> handleDuplicate(DuplicateIsbnException die) {
+    //Exception xử lý field unique bị trùng
+    @ExceptionHandler(DuplicateUniqueFieldException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicate(DuplicateUniqueFieldException die) {
         Map<String, Object> errorDetails = Map.of(
-                "code", "DUPLICATE_ISBN",
+                "code", "DUPLICATE_FIELD",
                 "message", die.getMessage()
         );
 
@@ -26,11 +26,11 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(responseBody, HttpStatus.CONFLICT);
     }
 
-    //Exception sách không tồn tại
-    @ExceptionHandler(BookNotFoundException.class)
-    public ResponseEntity<Map<String,Object>> handleBookNotFoundException(BookNotFoundException bnfe){
+    //Exception xử lý dữ liệu không tồn tại
+    @ExceptionHandler(ItemNotFoundException.class)
+    public ResponseEntity<Map<String,Object>> handleBookNotFoundException(ItemNotFoundException bnfe){
         Map<String, Object> errorDetails = Map.of(
-                "code", "BOOK_NOT_FOUND",
+                "code", "ITEM_NOT_FOUND",
                 "message", bnfe.getMessage()
         );
 
@@ -39,5 +39,34 @@ public class GlobalExceptionHandler {
                 "error", errorDetails
         );
         return new ResponseEntity<>(responseBody, HttpStatus.NOT_FOUND);
+    }
+
+    //Exception xử lý nhập thiếu field
+    @ExceptionHandler(FieldRequiredException.class)
+    public ResponseEntity<Map<String,Object>> handleFieldRequiredException(FieldRequiredException fre){
+        Map<String, Object> errorDetails = Map.of(
+                "code", "FIELD_REQUIRED",
+                "message", fre.getMessage()
+        );
+
+        Map<String, Object> responseBody = Map.of(
+                "success", false,
+                "error", errorDetails
+        );
+        return new ResponseEntity<>(responseBody, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String,Object>> handleException(Exception e){
+        Map<String, Object> errorDetails = Map.of(
+                "code", "UNIDENTIFIED_ERROR",
+                "message", e.getMessage()
+        );
+
+        Map<String, Object> responseBody = Map.of(
+                "success", false,
+                "error", errorDetails
+        );
+        return new ResponseEntity<>(responseBody, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

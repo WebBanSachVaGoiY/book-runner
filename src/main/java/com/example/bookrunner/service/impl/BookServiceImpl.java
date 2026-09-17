@@ -2,8 +2,8 @@ package com.example.bookrunner.service.impl;
 
 import com.example.bookrunner.dto.request.BookRequestDTO;
 import com.example.bookrunner.dto.response.BookResponseDTO;
-import com.example.bookrunner.exception.BookNotFoundException;
-import com.example.bookrunner.exception.DuplicateIsbnException;
+import com.example.bookrunner.exception.ItemNotFoundException;
+import com.example.bookrunner.exception.DuplicateUniqueFieldException;
 import com.example.bookrunner.model.Book;
 import com.example.bookrunner.model.Category;
 import com.example.bookrunner.repository.BookRepository;
@@ -41,8 +41,7 @@ public class BookServiceImpl implements BookService {
         List<BookResponseDTO> bookResponseDTOList = result.stream()
                 .map(response -> mapper.map(result, BookResponseDTO.class)).collect(Collectors.toList());
         Pageable pageable = PageRequest.of(0, 16);
-        Page<BookResponseDTO> bookResponseDTOPage = ListToPageUtil.convertListToPage(bookResponseDTOList, pageable);
-        return bookResponseDTOPage;
+        return ListToPageUtil.convertListToPage(bookResponseDTOList, pageable);
     }
 
     // Thêm sách
@@ -65,7 +64,7 @@ public class BookServiceImpl implements BookService {
         if (newBook.getLanguage() == null)
             newBook.setLanguage("Tiếng Việt");
         if (bookRepository.findByIsbn(newBook.getIsbn()).isPresent())
-            throw new DuplicateIsbnException("Mã định danh bị trùng!");
+            throw new DuplicateUniqueFieldException("Mã định danh bị trùng!");
 
         // Lookup Category từ DB thay vì dùng transient object
         if (bookRequestDTO.getCategoryId() != null) {
@@ -83,16 +82,16 @@ public class BookServiceImpl implements BookService {
     public void updateBook(Long id, BookRequestDTO bookRequestDTO) {
         Optional<Book> updating = bookRepository.findById(id);
         if (updating.isEmpty())
-            throw new BookNotFoundException("Sách không tồn tại!");
+            throw new ItemNotFoundException("Sách không tồn tại!");
         else {
             Book existingBook = updating.get();
             // Chỉ cập nhật các field được gửi lên, giữ lại id
             mapper.map(bookRequestDTO, existingBook);
             if (bookRepository.findByIsbn(existingBook.getIsbn()).isPresent())
-                throw new DuplicateIsbnException("Mã định danh bị trùng!");
+                throw new DuplicateUniqueFieldException("Mã định danh bị trùng!");
             if (bookRequestDTO.getCategoryId() != null) {
                 Category category = categoryRepository.findById(bookRequestDTO.getCategoryId())
-                        .orElseThrow(() -> new RuntimeException(
+                        .orElseThrow(() -> new ItemNotFoundException(
                                 "Category không tồn tại với id: " + bookRequestDTO.getCategoryId()));
                 existingBook.setCategory(category);
             }
