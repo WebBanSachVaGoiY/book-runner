@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -18,8 +19,18 @@ public class BookAPI {
     private final BookService bookService;
 
     @GetMapping
-    public Page<BookResponseDTO> getAllBook() {
-        return bookService.findAll();
+    public Page<BookResponseDTO> getAllBook(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "16") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        return bookService.findAll(keyword, categoryId, minPrice, maxPrice,
+                page, size, sortBy, sortDir);
     }
 
     @PostMapping

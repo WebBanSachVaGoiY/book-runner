@@ -43,10 +43,14 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> searchBooks(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("SELECT b FROM Book b WHERE b.active = true " +
+            "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
             "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
             "AND (:maxPrice IS NULL OR b.price <= :maxPrice)")
-    Page<Book> filterBooks(
+    Page<Book> searchAndFilterBooks(
+            @Param("keyword") String keyword,
             @Param("categoryId") Long categoryId,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,

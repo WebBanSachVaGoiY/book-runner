@@ -9,18 +9,18 @@ import com.example.bookrunner.model.Category;
 import com.example.bookrunner.repository.BookRepository;
 import com.example.bookrunner.repository.CategoryRepository;
 import com.example.bookrunner.service.BookService;
-import com.example.bookrunner.util.ListToPageUtil;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class BookServiceImpl implements BookService {
@@ -34,14 +34,27 @@ public class BookServiceImpl implements BookService {
     @Autowired
     private ModelMapper mapper;
 
-    // Lấy tất cả các sách
+    // Lấy tất cả các sách (có lọc + phân trang)
     @Override
-    public Page<BookResponseDTO> findAll() {
-        List<Book> result = bookRepository.findAll();
-        List<BookResponseDTO> bookResponseDTOList = result.stream()
-                .map(response -> mapper.map(result, BookResponseDTO.class)).collect(Collectors.toList());
-        Pageable pageable = PageRequest.of(0, 16);
-        return ListToPageUtil.convertListToPage(bookResponseDTOList, pageable);
+    public Page<BookResponseDTO> findAll(String keyword, Long categoryId,
+                                          BigDecimal minPrice, BigDecimal maxPrice,
+                                          int page, int size,
+                                          String sortBy, String sortDir) {
+        // 1. Tạo Sort object từ sortBy và sortDir
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        // 2. Tạo Pageable (page 0-indexed trong Spring Data)
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // 3. Gọi repository query kết hợp tìm kiếm + lọc (phân trang tại DB)
+        Page<Book> bookPage = bookRepository.searchAndFilterBooks(
+                keyword, categoryId, minPrice, maxPrice, pageable
+        );
+
+        // 4. Chuyển đổi Page<Book> → Page<BookResponseDTO>
+        return bookPage.map(book -> mapper.map(book, BookResponseDTO.class));
     }
 
     // Thêm sách
