@@ -58,6 +58,13 @@ public class User {
     @Builder.Default
     private Boolean enabled = true;
 
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private Long tokenVersion = 1L;
+
+    @Column(name = "refresh_token_jti")
+    private String refreshTokenJti;
+
     @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
