@@ -12,7 +12,9 @@ public interface BookService {
                                   BigDecimal minPrice, BigDecimal maxPrice,
                                   int page, int size,
                                   String sortBy, String sortDir);
+    BookResponseDTO findById(Long id);
     void createBook(BookRequestDTO bookRequestDTO);
     void updateBook(Long id, BookRequestDTO bookRequestDTO);
     void deleteBook(List<Long> ids);
+    BookResponseDTO toggleFeatured(Long id);
 }

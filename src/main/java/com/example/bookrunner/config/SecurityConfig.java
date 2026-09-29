@@ -1,5 +1,6 @@
 package com.example.bookrunner.config;
 
+import com.example.bookrunner.security.CustomAccessDeniedHandler;
 import com.example.bookrunner.security.JwtAuthenticationEntryPoint;
 import com.example.bookrunner.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationEntryPoint unauthorizedHandler;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
@@ -51,6 +53,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(unauthorizedHandler)
+                        .accessDeniedHandler(accessDeniedHandler)
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -63,15 +66,19 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh"
                         ).permitAll()
                         // Public Catalog Read Endpoints cho khách vãng lai
-                        .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books", "/api/v1/books/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").permitAll()
                         // Public Recommendation Endpoints (chỉ các endpoint chung, không bao gồm gợi ý cá nhân hóa)
                         .requestMatchers(HttpMethod.GET, "/api/v1/recommendations/related/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/recommendations/trending").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/recommendations/frequently-bought-together/**").permitAll()
+                        // Quản trị viên: Quản lý sách và danh mục (Thêm, Sửa, Xóa chỉ dành cho ROLE_ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/books", "/api/v1/books/**", "/api/v1/categories", "/api/v1/categories/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/books", "/api/v1/books/**", "/api/v1/categories", "/api/v1/categories/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/books", "/api/v1/books/**", "/api/v1/categories", "/api/v1/categories/**").hasRole("ADMIN")
                         // Admin Endpoints
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        // Mọi endpoint khác (bao gồm /api/v1/auth/me, /api/v1/auth/logout, personalized recommendations, orders, cart...) bắt buộc xác thực
+                        // Mọi endpoint khác (bao gồm /api/v1/auth/me, /api/v1/auth/logout, orders, cart...) bắt buộc xác thực
                         .anyRequest().authenticated()
                 );
 

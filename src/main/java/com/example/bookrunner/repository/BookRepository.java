@@ -1,9 +1,11 @@
 package com.example.bookrunner.repository;
 
 import com.example.bookrunner.model.Book;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,6 +18,13 @@ import java.util.Optional;
 public interface BookRepository extends JpaRepository<Book, Long> {
 
     Optional<Book> findByIsbn(String isbn);
+
+    @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.id = :id")
+    Optional<Book> findByIdWithCategory(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Book b WHERE b.id = :id")
+    Optional<Book> findByIdWithLock(@Param("id") Long id);
 
     Page<Book> findByActiveTrue(Pageable pageable);
 
@@ -42,13 +51,22 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             "LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Book> searchBooks(@Param("keyword") String keyword, Pageable pageable);
 
-    @Query("SELECT b FROM Book b WHERE b.active = true " +
-            "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-            "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
-            "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
-            "AND (:maxPrice IS NULL OR b.price <= :maxPrice)")
+    @Query(
+            value = "SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.active = true " +
+                    "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                    "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
+                    "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
+                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice)",
+            countQuery = "SELECT count(b) FROM Book b WHERE b.active = true " +
+                    "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                    "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
+                    "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
+                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice)"
+    )
     Page<Book> searchAndFilterBooks(
             @Param("keyword") String keyword,
             @Param("categoryId") Long categoryId,

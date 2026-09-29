@@ -1,6 +1,6 @@
 package com.example.bookrunner.dto.response;
 
-import com.example.bookrunner.model.Category;
+import com.example.bookrunner.dto.CategoryDTO;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 
 @Data
 public class BookResponseDTO {
+
+    private Long id;
 
     private String title;
 
@@ -37,7 +39,17 @@ public class BookResponseDTO {
 
     private Integer totalReviews;
 
-    private Category category;
+    private Integer soldCount;
+
+    private Boolean isFeatured;
+
+    private Boolean active;
+
+    private Long categoryId;
+
+    private String categoryName;
+
+    private CategoryDTO category;
 
     private LocalDateTime createdAt;
 }

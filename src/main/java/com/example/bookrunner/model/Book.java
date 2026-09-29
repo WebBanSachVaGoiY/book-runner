@@ -19,7 +19,8 @@ import java.util.List;
                 @Index(name = "idx_book_author", columnList = "author"),
                 @Index(name = "idx_book_category", columnList = "category_id"),
                 @Index(name = "idx_book_created_at", columnList = "created_at"),
-                @Index(name = "idx_book_featured", columnList = "is_featured")
+                @Index(name = "idx_book_featured", columnList = "is_featured"),
+                @Index(name = "idx_book_sold_count", columnList = "sold_count")
         }
 )
 @Getter
@@ -86,6 +87,10 @@ public class Book {
     @Column(name = "is_featured", nullable = false)
     @Builder.Default
     private Boolean isFeatured = false;
+
+    @Column(name = "sold_count", nullable = false)
+    @Builder.Default
+    private Integer soldCount = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")

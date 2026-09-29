@@ -34,24 +34,33 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     @Override
     public void createCategory(CategoryDTO categoryDTO) {
-        if (categoryDTO.getName()==null|| categoryDTO.getName().isBlank()) throw new FieldRequiredException("Vui lòng nhập đủ thông tin!");
-        if (categoryRepository.findBySlug(categoryDTO.getSlug()).isPresent()) throw new DuplicateUniqueFieldException("Slug bị trùng!");
+        if (categoryDTO.getName() == null || categoryDTO.getName().isBlank()) throw new FieldRequiredException("Vui lòng nhập đủ thông tin!");
+        if (categoryDTO.getSlug() != null && categoryRepository.findBySlug(categoryDTO.getSlug()).isPresent()) {
+            throw new DuplicateUniqueFieldException("Slug bị trùng!");
+        }
         Category newCategory = mapper.map(categoryDTO, Category.class);
+        newCategory.setId(null);
         categoryRepository.save(newCategory);
     }
 
     @Transactional
     @Override
     public void updateCategory(Long id, CategoryDTO categoryDTO) {
-        if (categoryDTO.getName()==null|| categoryDTO.getName().isBlank()) throw new FieldRequiredException("Vui lòng nhập đủ thông tin!");
-        if (categoryRepository.findBySlug(categoryDTO.getSlug()).isPresent()) throw new DuplicateUniqueFieldException("Slug bị trùng!");
-        Optional<Category> updating = categoryRepository.findById(id);
-        if (updating.isEmpty()){
-            throw new ItemNotFoundException("Danh muc khong ton tai!");
+        if (categoryDTO.getName() == null || categoryDTO.getName().isBlank()) throw new FieldRequiredException("Vui lòng nhập đủ thông tin!");
+        if (categoryDTO.getSlug() != null) {
+            categoryRepository.findBySlug(categoryDTO.getSlug()).ifPresent(existing -> {
+                if (!existing.getId().equals(id)) {
+                    throw new DuplicateUniqueFieldException("Slug bị trùng!");
+                }
+            });
         }
-        else{
+        Optional<Category> updating = categoryRepository.findById(id);
+        if (updating.isEmpty()) {
+            throw new ItemNotFoundException("Danh mục không tồn tại!");
+        } else {
             Category currentCategory = updating.get();
             mapper.map(categoryDTO, currentCategory);
+            currentCategory.setId(id);
             categoryRepository.save(currentCategory);
         }
     }

@@ -32,4 +32,10 @@ public class BookRequestDTO {
     private String language;
 
     private Long categoryId;
+
+    private Boolean isFeatured;
+
+    private Boolean active;
+
+    private Integer soldCount;
 }
