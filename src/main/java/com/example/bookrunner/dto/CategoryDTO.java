@@ -1,8 +1,8 @@
 package com.example.bookrunner.dto;
 
-import lombok.Data;
-
 import java.time.LocalDateTime;
+
+import lombok.Data;
 
 @Data
 public class CategoryDTO {

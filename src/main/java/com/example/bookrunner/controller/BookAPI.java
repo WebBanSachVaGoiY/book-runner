@@ -30,8 +30,7 @@ public class BookAPI {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "16") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
-    ) {
+            @RequestParam(defaultValue = "desc") String sortDir) {
         Page<BookResponseDTO> books = bookService.findAll(keyword, categoryId, minPrice, maxPrice,
                 page, size, sortBy, sortDir);
         return ResponseEntity.ok(ApiResponse.success(books));
@@ -51,7 +50,8 @@ public class BookAPI {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> updateBook(@PathVariable Long id, @RequestBody BookRequestDTO bookRequestDTO) {
+    public ResponseEntity<ApiResponse<Void>> updateBook(@PathVariable Long id,
+            @RequestBody BookRequestDTO bookRequestDTO) {
         bookService.updateBook(id, bookRequestDTO);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin thành công", null));
     }
