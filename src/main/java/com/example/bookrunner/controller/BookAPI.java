@@ -6,6 +6,7 @@ import com.example.bookrunner.service.BookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -33,18 +34,21 @@ public class BookAPI {
                 page, size, sortBy, sortDir);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<String> addBook(@RequestBody BookRequestDTO bookRequestDTO) {
         bookService.createBook(bookRequestDTO);
         return ResponseEntity.status(201).body("Thêm sách mới thành công");
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<String> updateBook(@PathVariable Long id, @RequestBody BookRequestDTO bookRequestDTO) {
         bookService.updateBook(id, bookRequestDTO);
         return ResponseEntity.status(200).body("Cập nhật thông tin thành công");
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping
     public ResponseEntity<String> deleteBook(@RequestBody List<Long> ids) {
         bookService.deleteBook(ids);
