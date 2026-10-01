@@ -104,8 +104,11 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception ex) {
                 log.error("Internal server error: ", ex);
+                String msg = ex.getMessage() != null && !ex.getMessage().isBlank()
+                                ? ex.getMessage()
+                                : "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.";
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(ApiResponse.error("Đã xảy ra lỗi hệ thống, vui lòng thử lại sau."));
+                                .body(ApiResponse.error(msg));
         }
 
         // Exception xử lý field unique bị trùng

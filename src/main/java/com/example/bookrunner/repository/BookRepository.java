@@ -22,8 +22,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.id = :id")
     Optional<Book> findByIdWithCategory(@Param("id") Long id);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT b FROM Book b WHERE b.id = :id")
+    @Query(value = "SELECT * FROM books WHERE id = :id FOR UPDATE", nativeQuery = true)
     Optional<Book> findByIdWithLock(@Param("id") Long id);
 
     Page<Book> findByActiveTrue(Pageable pageable);
