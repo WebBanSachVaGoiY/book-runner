@@ -56,6 +56,23 @@ public class CartAPI {
         return ResponseEntity.ok(ApiResponse.success("Xóa sản phẩm khỏi giỏ hàng thành công", null));
     }
 
+    @PutMapping("/items/{bookId}")
+    public ResponseEntity<Void> updateCartItem(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long bookId,
+            @RequestBody AddToCartRequest request) {
+        cartService.updateItemQuantity(customUserDetails.getId(), bookId, request.getQuantity());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/items/{bookId}")
+    public ResponseEntity<Void> deleteSingleCartItem(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long bookId) {
+        cartService.deleteCartItem(customUserDetails.getId(), List.of(bookId));
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/items")
     public ResponseEntity<ApiResponse<Void>> deleteCartItems(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -69,5 +86,11 @@ public class CartAPI {
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         cartService.clearCart(customUserDetails.getId());
         return ResponseEntity.ok(ApiResponse.success("Xóa sạch giỏ hàng thành công", null));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> clearCart(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        cartService.clearCart(customUserDetails.getId());
+        return ResponseEntity.noContent().build();
     }
 }
