@@ -62,11 +62,4 @@ public class BookAPI {
         bookService.deleteBook(ids);
         return ResponseEntity.ok(ApiResponse.success("Xóa sách thành công", null));
     }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/{id}/featured")
-    public ResponseEntity<ApiResponse<BookResponseDTO>> toggleFeatured(@PathVariable Long id) {
-        BookResponseDTO book = bookService.toggleFeatured(id);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái nổi bật thành công", book));
-    }
 }

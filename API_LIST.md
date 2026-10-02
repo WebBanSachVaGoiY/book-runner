@@ -1,7 +1,7 @@
 # DANH MỤC RESTFUL APIS - DỰ ÁN BOOK-RUNNER
 > **Hệ thống E-Commerce Bán Sách Tích Hợp Recommender System**  
-> *Phiên bản: 1.1 | Ngày cập nhật: 25/09/2026*  
-> *Trạng thái: 18 API Đã Hoàn Thành | 16 API Cần Thực Hiện Tiếp*
+> *Phiên bản: 1.2 | Ngày cập nhật: 30/09/2026*  
+> *Trạng thái: 23 API Đã Hoàn Thành | 11 API Cần Thực Hiện Tiếp*
 
 ---
 
@@ -88,11 +88,11 @@
 
 | STT | Method | Endpoint URI | Quyền hạn | Mô tả chức năng | Trạng thái |
 | :---: | :---: | :--- | :---: | :--- | :---: |
-| 23 | `GET` | `/api/v1/cart` | `AUTHENTICATED` | Lấy toàn bộ danh sách sản phẩm trong giỏ hàng của user | *[CẦN LÀM]* |
-| 24 | `POST` | `/api/v1/cart/items` | `AUTHENTICATED` | Thêm sách vào giỏ (`bookId`, `quantity`), kiểm tra tồn kho | *[CẦN LÀM]* |
-| 25 | `PUT` | `/api/v1/cart/items/{itemId}` | `AUTHENTICATED` | Cập nhật số lượng của một cuốn sách trong giỏ | *[CẦN LÀM]* |
-| 26 | `DELETE` | `/api/v1/cart/items/{itemId}` | `AUTHENTICATED` | Xóa 1 cuốn sách ra khỏi giỏ hàng | *[CẦN LÀM]* |
-| 27 | `DELETE` | `/api/v1/cart` | `AUTHENTICATED` | Xóa sạch toàn bộ sản phẩm trong giỏ | *[CẦN LÀM]* |
+| 23 | `GET` | `/api/v1/cart` | `AUTHENTICATED` | Lấy toàn bộ danh sách sản phẩm trong giỏ hàng của user | **[ĐÃ HOÀN THÀNH]** |
+| 24 | `POST` | `/api/v1/cart/items` | `AUTHENTICATED` | Thêm sách vào giỏ (`bookId`, `quantity`), kiểm tra tồn kho | **[ĐÃ HOÀN THÀNH]** |
+| 25 | `PUT` | `/api/v1/cart/items/{itemId}` | `AUTHENTICATED` | Cập nhật số lượng của một cuốn sách trong giỏ | **[ĐÃ HOÀN THÀNH]** |
+| 26 | `DELETE` | `/api/v1/cart/items/{itemId}` | `AUTHENTICATED` | Xóa 1 cuốn sách ra khỏi giỏ hàng | **[ĐÃ HOÀN THÀNH]** |
+| 27 | `DELETE` | `/api/v1/cart` | `AUTHENTICATED` | Xóa sạch toàn bộ sản phẩm trong giỏ | **[ĐÃ HOÀN THÀNH]** |
 
 ---
 

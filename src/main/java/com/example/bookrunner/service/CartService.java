@@ -85,4 +85,50 @@ public class CartService {
         cart.getItems().removeAll(itemsToRemove);
         cartRepository.save(cart);
     }
+
+    public void addToCart(Long userId, com.example.bookrunner.dto.request.AddToCartRequest request) {
+        addEditCart(userId, request.getBookId(), request.getQuantity());
+    }
+
+    public CartDTO updateCartItemQuantity(Long userId, Long itemId, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new BadRequestException("Số lượng mua phải lớn hơn 0!");
+        }
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy giỏ hàng"));
+
+        CartItem item = cart.getItems().stream()
+                .filter(ci -> ci.getId().equals(itemId) || ci.getBook().getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy sản phẩm trong giỏ hàng"));
+
+        if (quantity > item.getBook().getStockQuantity()) {
+            throw new BadRequestException("Số lượng đặt mua vượt quá tồn kho!");
+        }
+
+        item.setQuantity(quantity);
+        cartRepository.save(cart);
+        return CartToCartDTO.toCartDTO(cart);
+    }
+
+    public void removeCartItem(Long userId, Long itemId) {
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy giỏ hàng"));
+
+        CartItem item = cart.getItems().stream()
+                .filter(ci -> ci.getId().equals(itemId) || ci.getBook().getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy sản phẩm nào trong giỏ hàng để xoá!"));
+
+        cart.getItems().remove(item);
+        cartRepository.save(cart);
+    }
+
+    public void clearCart(Long userId) {
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy giỏ hàng"));
+
+        cart.getItems().clear();
+        cartRepository.save(cart);
+    }
 }

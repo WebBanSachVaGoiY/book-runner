@@ -1,7 +1,7 @@
 # KẾ HOẠCH & DANH MỤC CÔNG VIỆC DỰ ÁN (PROJECT ROADMAP & TASKS)
 > **Dự án**: Website Bán Sách Tích Hợp Hệ Thống Gợi Ý (Book-Runner E-Commerce & RecSys)  
-> *Thời gian dự kiến: 10 Tuần | Công nghệ: Spring Boot, Python FastAPI, MySQL, Redis, React*  
-> *Cập nhật ngày: 29/09/2026*
+> **Thời gian dự kiến: 10 Tuần | Công nghệ: Spring Boot, Python FastAPI, MySQL / MariaDB, Redis, React**  
+> *Cập nhật ngày: 02/10/2026*
 
 ---
 
@@ -9,9 +9,9 @@
 
 ```
 [Giai đoạn 1: Khảo sát & Data Modeling] ──────────► [100% HOÀN THÀNH]
-[Giai đoạn 2: Backend Core (E-Commerce)] ──────────► [ 85% HOÀN THÀNH] (Auth, Catalog, Order, User, Admin: 100%)
-[Giai đoạn 3: Recommender System (ML/FastAPI)] ────► [ 20% HOÀN THÀNH] (Schema DB & BUY Tracking sẵn sàng)
-[Giai đoạn 4: Frontend Web UI/UX] ─────────────────► [ 90% HOÀN THÀNH] (13 Trang UI, Interceptor, DTO Sync)
+[Giai đoạn 2: Backend Core (E-Commerce)] ──────────► [ 95% HOÀN THÀNH] (Auth, Catalog, Cart, Order, User, Admin: 100%)
+[Giai đoạn 3: Recommender System (ML/FastAPI)] ────► [ 20% HOÀN THÀNH] (Schema DB, Interaction BUY Tracking sẵn sàng)
+[Giai đoạn 4: Frontend Web UI/UX] ─────────────────► [ 92% HOÀN THÀNH] (13 Trang UI, Cart Adapter, Auth/Order Sync)
 [Giai đoạn 5: Redis Caching & Tối ưu] ─────────────► [ 25% HOÀN THÀNH] (Config Redis)
 [Giai đoạn 6: Đánh giá, Load Test & DevOps] ────────► [  0% CHƯA BẮT ĐẦU]
 ```
@@ -52,20 +52,33 @@
   - Bọc phản hồi của `BookAPI` và `CategoryAPI` trong chuẩn `ApiResponse<T>`.
 - [x] Bộ Unit Tests `BookServiceTest` (100% Passed).
 
-### 1.4. Phân Hệ Đơn Hàng (Order Subsystem) - 100%
-- [x] Tạo đơn hàng mới (`POST /orders`): Hỗ trợ mua ngay hoặc checkout từ giỏ hàng.
+### 1.4. Phân Hệ Giỏ Hàng (Cart Subsystem) - 100% Hoàn Thành Mới
+- [x] Thiết kế DTOs: `AddToCartRequest`, `UpdateCartItemRequest`, `CartDTO`, `CartItemDTO`.
+- [x] Xây dựng `CartService` & `CartServiceImpl`:
+  - [x] `getCart(Long userId)`: Lấy giỏ hàng, tự động tính lại đơn giá mới nhất của từng sách, fallback giá gốc khi `discountPrice` null/rỗng.
+  - [x] `addToCart(Long userId, AddToCartRequest request)`: Thêm sách vào giỏ (nếu đã có thì cộng dồn số lượng, kiểm tra tồn kho tối đa).
+  - [x] `updateCartItemQuantity(Long userId, Long itemId, int quantity)`: Cập nhật số lượng item trong giỏ (hỗ trợ tra cứu theo cả `cartItem.id` hoặc `book.id`).
+  - [x] `removeCartItem(Long userId, Long itemId)`: Xóa 1 cuốn sách khỏi giỏ.
+  - [x] `deleteCartItem(Long userId, List<Long> bookIds)`: Xóa hàng loạt nhiều cuốn sách theo danh sách bookId.
+  - [x] `clearCart(Long userId)`: Xóa sạch toàn bộ giỏ hàng.
+- [x] Xây dựng `CartAPI` (`/api/v1/cart`) chuẩn hóa `ApiResponse<T>`, phân quyền người dùng qua `@AuthenticationPrincipal`.
+- [x] Bộ Unit Tests `CartServiceTest` (100% Passed).
+
+### 1.5. Phân Hệ Đơn Hàng (Order Subsystem) - 100%
+- [x] Tạo đơn hàng mới (`POST /orders`): Hỗ trợ mua trực tiếp danh sách items hoặc checkout tự động từ toàn bộ giỏ hàng `Cart`.
 - [x] **Trừ tồn kho an toàn (Concurrency Control):** Khóa bi quan `findByIdWithLock` (`PESSIMISTIC_WRITE`) ngăn chặn bán quá số lượng (Overselling).
+- [x] **Tương thích hoàn toàn MariaDB / XAMPP:** Đổi dialect sang `org.hibernate.dialect.MariaDBDialect` trong `application.yaml`, khắc phục dứt điểm lỗi SQL syntax `FOR UPDATE OF <alias>`.
 - [x] Tự động sinh mã đơn hàng duy nhất `ORD-...`.
 - [x] Tự động dọn dẹp các sản phẩm đã mua khỏi giỏ hàng `Cart`.
 - [x] **Tự động cập nhật số lượng đã bán (`soldCount`):** Tự động tăng `soldCount` khi đặt hàng thành công (`OrderServiceImpl`) và tự động hoàn giảm lại `soldCount` khi khách hàng hoặc admin hủy đơn hàng.
 - [x] **Tích hợp RecSys ngầm:** Tự động ghi nhận interaction `BUY` (trọng số 5.0) vào bảng `user_book_interactions`.
 - [x] Xem lịch sử đơn hàng của tôi (`GET /orders/my-orders`).
-- [x] Xem chi tiết đơn hàng (`GET /orders/{id}`) có kiểm tra quyền sở hữu.
+- [x] Xem chi tiết đơn hàng (`GET /orders/{id}`) có kiểm tra quyền sở hữu hoặc quyền Quản trị viên (`ROLE_ADMIN`).
 - [x] Khách hàng hủy đơn hàng (`PUT /orders/{id}/cancel`): Chỉ cho phép hủy khi PENDING/CONFIRMED, **tự động hoàn lại tồn kho sách**.
 - [x] Quản trị Admin: Xem toàn bộ đơn hàng sàn (`GET /admin/orders`), cập nhật trạng thái đơn (`PUT /admin/orders/{id}/status`), tự hoàn kho nếu hủy, tự cập nhật `PAID` nếu giao thành công đơn COD.
 - [x] Bộ Unit Tests `OrderServiceTest` (100% Passed).
 
-### 1.5. Phân Hệ Người Dùng & Hồ Sơ (User Subsystem) - 100%
+### 1.6. Phân Hệ Người Dùng & Hồ Sơ (User Subsystem) - 100%
 - [x] **Khách hàng:**
   - Lấy thông tin cá nhân (`GET /users/profile`).
   - Cập nhật hồ sơ (`PUT /users/profile`): Họ tên, số điện thoại, địa chỉ giao hàng.
@@ -77,18 +90,22 @@
   - Bật/tắt trạng thái hoạt động tài khoản (`PATCH /admin/users/{id}/toggle-enabled`).
 - [x] Bộ Unit Tests `UserServiceTest` (100% Passed).
 
-### 1.6. Xử Lý Ngoại Lệ & Chuẩn Hóa API Toàn Cục (Global Exception & Response Format) - 100%
-- [x] Chuẩn hóa định dạng phản hồi API toàn hệ thống qua `ApiResponse<T>` (`success`, `message`, `data`, `errors`, `timestamp`).
-- [x] Tối ưu `GlobalExceptionHandler`: Bóc tách thông báo lỗi validation đầu tiên từ `MethodArgumentNotValidException` (`BindingResult`) đưa lên thuộc tính `message` cấp cao nhất, giúp giao diện Frontend hiển thị Toast thông báo lỗi trực tiếp và tự nhiên cho người dùng.
+### 1.7. Dữ Liệu Khởi Tạo Mẫu (Database Seeder) - 100%
+- [x] Xây dựng `DataInit.java` tự động chạy khi khởi động ứng dụng:
+  - Khởi tạo tài khoản Quản trị: `admin` / `Password123` (`ROLE_ADMIN`).
+  - Khởi tạo tài khoản Khách hàng: `customer01` / `Password123` (`ROLE_CUSTOMER`).
+  - Khởi tạo các Danh mục sách chuẩn (Công nghệ thông tin, Kinh tế, Văn học...).
+  - Khởi tạo danh sách các đầu sách thực tế kèm giá, giá khuyến mãi, tồn kho và lượt bán mẫu.
 
-### 1.7. Tích Hợp & Đồng Bộ Frontend Web (Frontend Web Integration) - 90%
-- [x] Xây dựng hoàn chỉnh giao diện 13 trang người dùng & quản trị bằng React + CSS Module / Global Styles.
-- [x] **Chuẩn hóa Axios Interceptor:** Thiết lập `BASE_URL = '/api/v1'`, tách riêng instance `refreshClient` không gắn interceptor response để thực hiện refresh token, loại bỏ hoàn toàn nguy cơ treo trình duyệt do đệ quy khi refresh token hết hạn.
-- [x] **Bảo vệ Chống Gian Lận Giá (Anti-Price Tampering):** Client chỉ gửi danh sách `{ bookId, quantity }` khi checkout, giá sách do Backend khóa bi quan (`PESSIMISTIC_WRITE`) và đọc trực tiếp từ DB.
-- [x] **Đồng bộ Quy tắc Mật khẩu:** Ràng buộc mật khẩu phía Frontend ($\ge 8$ ký tự, chữ và số) khớp hoàn toàn với Spring Boot validation.
-- [x] **Ánh xạ Sắp xếp Sách:** Map tùy chọn "Bán chạy" (`best_seller`) sang `sortBy=soldCount&sortDir=desc`.
-- [x] **Thu hẹp Mock Fallback:** Giữ nguyên và hiển thị lỗi thực tế từ Backend (400, 401, 403, 500) qua Toast UI; mock fallback chỉ kích hoạt khi mất kết nối mạng hoặc lỗi 502 Bad Gateway khi Backend chưa khởi động.
-- [x] Nhật ký chi tiết 12 file code Frontend đã thay đổi được lưu tại [`FRONTEND_CHANGES.md`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/FRONTEND_CHANGES.md).
+### 1.8. Xử Lý Ngoại Lệ & Chuẩn Hóa API Toàn Cục - 100%
+- [x] Chuẩn hóa định dạng phản hồi API toàn hệ thống qua `ApiResponse<T>` (`success`, `message`, `data`, `errors`, `timestamp`).
+- [x] Tối ưu `GlobalExceptionHandler`: Bóc tách thông báo lỗi validation đầu tiên từ `MethodArgumentNotValidException` (`BindingResult`) đưa lên thuộc tính `message` cấp cao nhất.
+
+### 1.9. Đồng Bộ Tích Hợp Frontend Web (Frontend Integration Phase 1) - Hoàn Thành
+- [x] **Adapter DTO Giỏ Hàng:** Bổ sung hàm `normalizeCartData` trong `cartApi.js` của Frontend, tự động ánh xạ cấu trúc `cartItemDTOList` từ Spring Boot sang format lồng `items: [{ book: {...} }]` mà UI yêu cầu.
+- [x] **API Xóa hàng loạt giỏ hàng:** Bổ sung method `deleteItems(bookIds)` trong `cartApi.js` khớp với `DELETE /api/v1/cart/items`.
+- [x] **Gỡ bỏ ghi chú TODO cũ:** Cập nhật `adminApi.js` gỡ bỏ ghi chú cũ về User Management.
+- [x] **Tạo kế hoạch công việc Frontend:** Lưu tại [`FRONTEND_TASKS.md`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/Front_End/FRONTEND_TASKS.md).
 
 ---
 
@@ -96,16 +113,10 @@
 
 ### 📌 Giai Đoạn 1: Hoàn Thiện Các API E-Commerce Cốt Lõi Còn Lại
 
-#### Task 1: Phân Hệ Giỏ Hàng (Cart Module)
-- [ ] Tạo các DTOs: `AddToCartRequest`, `UpdateCartItemRequest`, `CartResponseDTO`, `CartItemResponseDTO`.
-- [ ] Viết `CartService` & `CartServiceImpl`:
-  - [ ] `getCart(Long userId)`: Lấy thông tin giỏ hàng của user (tính lại đơn giá mới nhất của sách).
-  - [ ] `addToCart(Long userId, AddToCartRequest request)`: Thêm sách vào giỏ (nếu sách đã có thì cộng dồn số lượng, kiểm tra tồn kho tối đa).
-  - [ ] `updateCartItemQuantity(Long userId, Long itemId, int quantity)`: Đổi số lượng.
-  - [ ] `removeCartItem(Long userId, Long itemId)`: Xóa 1 cuốn sách.
-  - [ ] `clearCart(Long userId)`: Xóa sạch giỏ.
-- [ ] Viết `CartController` (`/api/v1/cart`).
-- [ ] Viết Unit Test cho `CartService`.
+#### Task 1: Bổ Sung Tham Số Lọc Sách Nổi Bật (`isFeatured`)
+- [ ] Cập nhật `BookAPI.java`: Thêm `@RequestParam(required = false) Boolean isFeatured` vào endpoint `GET /api/v1/books`.
+- [ ] Cập nhật `BookServiceImpl.java`: Nếu `isFeatured != null`, lọc sách theo `isFeatured` kết hợp với các bộ lọc hiện tại.
+- [ ] *Mục đích:* Cho phép Frontend gọi `GET /books?isFeatured=true&size=8` hiển thị đúng mục "Sách nổi bật" ở Trang chủ.
 
 #### Task 2: Phân Hệ Đánh Giá & Bình Luận (Review Module)
 - [ ] Tạo các DTOs: `CreateReviewRequest`, `ReviewResponseDTO`.
@@ -116,9 +127,17 @@
   - [ ] Tự động tính toán lại `averageRating` và `totalReviews` trong bảng `books`.
   - [ ] Tự động ghi nhận interaction `RATING` vào bảng `user_book_interactions`.
   - [ ] `getReviewsByBook(Long bookId, Pageable pageable)`: Lấy danh sách review của sách.
-- [ ] Viết `ReviewController` (`/api/v1/books/{bookId}/reviews`).
+- [ ] Viết `ReviewController` (`/api/v1/books/{bookId}/reviews`, `/api/v1/reviews/{id}`).
+- [ ] Chuyển Frontend `reviewApi.js` từ mock fallback sang gọi API thật.
 
-#### Task 3: Tích Hợp Cổng Thanh Toán VNPay Sandbox
+#### Task 3: Phân Hệ Báo Cáo & Thống Kê Dashboard Admin (Stats Module)
+- [ ] Viết `AdminStatsController` (`/api/v1/admin/stats/**`):
+  - [ ] `GET /api/v1/admin/stats`: Tổng doanh thu, tổng số đơn hàng, tổng số người dùng, tổng số đầu sách.
+  - [ ] `GET /api/v1/admin/stats/revenue`: Doanh thu theo tháng phục vụ biểu đồ LineChart.
+  - [ ] `GET /api/v1/admin/stats/best-sellers`: Top sách bán chạy nhất phục vụ biểu đồ BarChart.
+- [ ] Chuyển Frontend `DashboardPage.jsx` từ mock data sang gọi API thật.
+
+#### Task 4: Tích Hợp Cổng Thanh Toán VNPay Sandbox
 - [ ] Tạo file cấu hình `VNPayConfig.java` (chứa `vnp_TmnCode`, `vnp_HashSecret`, `vnp_Url`, `vnp_ReturnUrl`).
 - [ ] Xây dựng tiện ích tính toán mã băm an toàn HMAC-SHA512.
 - [ ] Tạo API `POST /api/v1/payments/vnpay/create-url`: Nhận `orderId`, sinh URL redirect sang cổng VNPay Sandbox.
@@ -129,16 +148,15 @@
 
 ### 📌 Giai Đoạn 2: Xây Dựng Bộ Thu Thập Dữ Liệu & Pipeline RecSys
 
-#### Task 4: Bộ Thu Thập Hành Vi Người Dùng (Interaction Tracker)
+#### Task 5: Bộ Thu Thập Hành Vi Người Dùng (Interaction Tracker)
 - [x] Tự động ghi nhận tương tác `BUY` khi đơn hàng thành công (đã hoàn thành trong `OrderServiceImpl`).
 - [ ] Tạo API `POST /api/v1/interactions/log`:
   - Nhận `bookId` và loại hành vi (`VIEW`, `ADD_TO_CART`).
   - Sử dụng `@Async` của Spring để ghi vào bảng `user_book_interactions` không làm chậm response của người dùng.
 - [ ] Chuẩn bị kịch bản sinh dữ liệu mẫu (**Synthetic Data Seeder**):
   - Viết script Python hoặc SQL nạp tập dữ liệu giả lập (50 users mẫu, 200 cuốn sách, khoảng 3.000 - 10.000 tương tác `VIEW`, `ADD_TO_CART`, `BUY`, `RATING`).
-  - *Mục đích:* Tránh bẫy thiếu dữ liệu khi bắt đầu huấn luyện thuật toán gợi ý.
 
-#### Task 5: Xây Dựng Python RecSys Microservice (FastAPI)
+#### Task 6: Xây Dựng Python RecSys Microservice (FastAPI)
 - [ ] Khởi tạo dự án Python:
   - Cấu trúc thư mục: `app/main.py`, `app/models/`, `app/algorithms/`, `app/database.py`.
   - Cài đặt thư viện: `fastapi`, `uvicorn`, `sqlalchemy`, `pymysql`, `scikit-learn`, `implicit`, `pandas`, `numpy`.
@@ -159,7 +177,7 @@
 
 ### 📌 Giai Đoạn 3: Serving Gợi Ý, Caching & Fallback Cold-Start
 
-#### Task 6: Xây Dựng Serving API & Fallback Trong Spring Boot
+#### Task 7: Xây Dựng Serving API & Fallback Trong Spring Boot
 - [ ] Tạo `RecommendationService`:
   - [ ] `getForYouRecommendations(Long userId)`:
     - Nếu số lượng tương tác của user $\ge 5$: Lấy dữ liệu cá nhân hóa từ `user_recommendations`.
@@ -172,38 +190,19 @@
 
 ---
 
-### 📌 Giai Đoạn 4: Hoàn Thiện Tích Hợp Frontend Web (Frontend Finalization)
+### 📌 Giai Đoạn 4: Đánh Giá RecSys, DevOps & Báo Cáo Nghiệm Thu
 
-#### Task 7: Đấu Nối API Thật Còn Lại Cho Frontend Khách Hàng
-- [x] Đã hoàn thành toàn bộ khung giao diện, routing, state quản lý và tích hợp Auth, Books, Catalog, Orders, Profile.
-- [ ] Đấu nối API Giỏ hàng thực tế (`/api/v1/cart`) thay cho Local Storage / State sau khi hoàn thành Task 1.
-- [ ] Đấu nối API Đánh giá & Bình luận thực tế (`/api/v1/books/{id}/reviews`) sau khi hoàn thành Task 2.
-- [ ] Đấu nối URL redirect thanh toán VNPay Sandbox tại `CheckoutPage.jsx` sau khi hoàn thành Task 3.
-- [ ] Bắn sự kiện ngầm gọi API Interaction Tracker (`VIEW`, `ADD_TO_CART`) sau khi hoàn thành Task 4.
-- [ ] Đấu nối API Gợi ý sách cá nhân hóa (`/api/v1/recommendations`) vào Carousel trang chủ và trang chi tiết sách sau khi hoàn thành Task 6.
-
-#### Task 8: Hoàn Thiện Frontend Quản Trị (Admin Dashboard)
-- [x] Đã hoàn thành giao diện `DashboardPage`, `ManageBooksPage`, `ManageOrdersPage`, `ManageUsersPage`.
-- [x] Đã tích hợp API Quản lý Sách (CRUD, Featured), Quản lý Đơn hàng (cập nhật trạng thái), Quản lý Người dùng (phân quyền, khóa/mở khóa).
-- [ ] Đấu nối API Thống kê doanh thu & biểu đồ thực tế khi hoàn thiện module Báo cáo.
-- [ ] Thêm nút bấm quản trị: "Kích hoạt huấn luyện lại mô hình RecSys" thủ công gọi API FastAPI.
-
----
-
-### 📌 Giai Đoạn 5: Đánh Giá RecSys, DevOps & Báo Cáo Nghiệm Thu
-
-#### Task 9: Đánh Giá Mô Hình Khuyến Nghị & Tối Ưu
+#### Task 8: Đánh Giá Mô Hình Khuyến Nghị & Tối Ưu
 - [ ] Đo lường độ chính xác mô hình RecSys Offline trên tập Test:
   - **Precision@K** & **Recall@K** ($K = 5, 10$).
   - **NDCG (Normalized Discounted Cumulative Gain)**.
   - **Catalog Coverage** (Độ phủ của danh mục sách được gợi ý).
-- [ ] Ghi lại kết quả số liệu để đưa vào biểu đồ trong Báo cáo.
 
-#### Task 10: Đóng Gói Hệ Thống & Triển Khai (DevOps)
+#### Task 9: Đóng Gói Hệ Thống & Triển Khai (DevOps)
 - [ ] Viết `Dockerfile` cho Backend Spring Boot.
 - [ ] Viết `Dockerfile` cho Python FastAPI Service.
 - [ ] Viết `docker-compose.yml` khởi chạy đồng bộ:
-  - Service 1: `mysql` (Port 3306)
+  - Service 1: `mysql` / `mariadb` (Port 3306)
   - Service 2: `redis` (Port 6379)
   - Service 3: `spring-boot-app` (Port 8080)
   - Service 4: `fastapi-recsys` (Port 8000)
