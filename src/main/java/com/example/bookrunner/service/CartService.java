@@ -81,33 +81,6 @@ public class CartService {
         cartRepository.save(cart);
     }
 
-    public void updateItemQuantity(Long userId, Long bookId, Integer quantity) {
-        if (quantity == null || quantity <= 0) {
-            deleteCartItem(userId, List.of(bookId));
-            return;
-        }
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy sách!"));
-        Cart cart = getOrCreateCart(userId);
-        CartItem item = cart.getItems().stream()
-                .filter(bookItem -> bookItem.getBook().getId().equals(bookId))
-                .findFirst()
-                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy sản phẩm trong giỏ hàng"));
-
-        if (quantity > book.getStockQuantity()) {
-            throw new BadRequestException("Số lượng đặt mua vượt quá tồn kho!");
-        }
-
-        item.setQuantity(quantity);
-        cartRepository.save(cart);
-    }
-
-    public void clearCart(Long userId) {
-        Cart cart = getOrCreateCart(userId);
-        cart.getItems().clear();
-        cartRepository.save(cart);
-    }
-
     public void deleteCartItem(Long userId, List<Long> bookIds) {
         if (bookIds == null || bookIds.isEmpty()) {
             throw new BadRequestException("Vui lòng chọn ít nhất một sản phẩm để xoá!");
@@ -135,8 +108,7 @@ public class CartService {
         if (quantity == null || quantity <= 0) {
             throw new BadRequestException("Số lượng mua phải lớn hơn 0!");
         }
-        Cart cart = cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy giỏ hàng"));
+        Cart cart = getOrCreateCart(userId);
 
         CartItem item = cart.getItems().stream()
                 .filter(ci -> ci.getId().equals(itemId) || ci.getBook().getId().equals(itemId))
@@ -153,8 +125,7 @@ public class CartService {
     }
 
     public void removeCartItem(Long userId, Long itemId) {
-        Cart cart = cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy giỏ hàng"));
+        Cart cart = getOrCreateCart(userId);
 
         CartItem item = cart.getItems().stream()
                 .filter(ci -> ci.getId().equals(itemId) || ci.getBook().getId().equals(itemId))
@@ -166,9 +137,7 @@ public class CartService {
     }
 
     public void clearCart(Long userId) {
-        Cart cart = cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy giỏ hàng"));
-
+        Cart cart = getOrCreateCart(userId);
         cart.getItems().clear();
         cartRepository.save(cart);
     }
