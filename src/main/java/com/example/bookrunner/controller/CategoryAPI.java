@@ -3,6 +3,7 @@ package com.example.bookrunner.controller;
 import com.example.bookrunner.dto.CategoryDTO;
 import com.example.bookrunner.dto.common.ApiResponse;
 import com.example.bookrunner.service.CategoryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,14 +26,14 @@ public class CategoryAPI {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createCategory(@RequestBody CategoryDTO categoryDTO){
+    public ResponseEntity<ApiResponse<Void>> createCategory(@Valid @RequestBody CategoryDTO categoryDTO){
         categoryService.createCategory(categoryDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Thêm danh mục mới thành công!", null));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> updateCategory(@PathVariable Long id, @RequestBody CategoryDTO categoryDTO){
+    public ResponseEntity<ApiResponse<Void>> updateCategory(@PathVariable Long id, @Valid @RequestBody CategoryDTO categoryDTO){
         categoryService.updateCategory(id, categoryDTO);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật danh mục thành công!", null));
     }

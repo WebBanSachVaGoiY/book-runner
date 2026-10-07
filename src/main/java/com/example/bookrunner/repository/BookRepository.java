@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -19,11 +20,14 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     Optional<Book> findByIsbn(String isbn);
 
+    boolean existsByIsbnAndIdNot(String isbn, Long id);
+
+    boolean existsByCategoryIdIn(List<Long> categoryIds);
+
     @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.id = :id")
     Optional<Book> findByIdWithCategory(@Param("id") Long id);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT b FROM Book b WHERE b.id = :id")
+    @Query(value = "SELECT * FROM books WHERE id = :id FOR UPDATE", nativeQuery = true)
     Optional<Book> findByIdWithLock(@Param("id") Long id);
 
     Page<Book> findByActiveTrue(Pageable pageable);
@@ -84,6 +88,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> findBestSellers(Pageable pageable);
 
     List<Book> findAllByIdInAndActiveTrue(List<Long> ids);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Book b SET b.active = :active WHERE b.id IN :ids")
+    void updateActiveStatusByIdIn(@Param("ids") List<Long> ids, @Param("active") Boolean active);
 
     void deleteByIdIn(List<Long> ids);
 }

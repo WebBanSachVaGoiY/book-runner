@@ -20,5 +20,7 @@ public interface BookService {
 
     void deleteBook(List<Long> ids);
 
+    void restoreBook(List<Long> ids);
+
     BookResponseDTO toggleFeatured(Long id);
 }
