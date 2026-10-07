@@ -11,26 +11,22 @@ import com.example.bookrunner.repository.BookRepository;
 import com.example.bookrunner.repository.CartRepository;
 import com.example.bookrunner.repository.UserRepository;
 import com.example.bookrunner.util.CartToCartDTO;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 @Service
+@RequiredArgsConstructor
 public class CartService {
 
-    @Autowired
-    private CartRepository cartRepository;
-
-    @Autowired
-    private BookRepository bookRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    private final CartRepository cartRepository;
+    private final BookRepository bookRepository;
+    private final UserRepository userRepository;
 
     public Cart getOrCreateCart(Long userId) {
         return cartRepository.findByUserId(userId).orElseGet(() -> {
@@ -56,6 +52,9 @@ public class CartService {
         Optional<Book> book = bookRepository.findById(bookId);
         if (book.isEmpty())
             throw new ItemNotFoundException("Không tìm thấy sách!");
+        if (!Boolean.TRUE.equals(book.get().getActive())) {
+            throw new BadRequestException("Sách '" + book.get().getTitle() + "' hiện đã ngừng kinh doanh, không thể thêm vào giỏ hàng!");
+        }
         Cart cart = getOrCreateCart(userId);
         Optional<CartItem> item = cart.getItems().stream()
                 .filter(bookItem -> bookItem.getBook().getId().equals(bookId)).findFirst();

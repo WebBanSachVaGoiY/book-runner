@@ -38,6 +38,15 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final UserBookInteractionRepository interactionRepository;
 
+    private static final Map<OrderStatus, Set<OrderStatus>> TRANSITIONS = Map.of(
+            OrderStatus.PENDING, Set.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
+            OrderStatus.CONFIRMED, Set.of(OrderStatus.SHIPPING, OrderStatus.CANCELLED),
+            OrderStatus.SHIPPING, Set.of(OrderStatus.DELIVERED, OrderStatus.RETURNED),
+            OrderStatus.DELIVERED, Set.of(OrderStatus.RETURNED),
+            OrderStatus.CANCELLED, Set.of(),
+            OrderStatus.RETURNED, Set.of()
+    );
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderResponseDTO createOrder(Long userId, CreateOrderRequest request) {
@@ -217,6 +226,10 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            order.setPaymentStatus(PaymentStatus.REFUNDED);
+        }
+
         order.setStatus(OrderStatus.CANCELLED);
         Order updatedOrder = orderRepository.save(order);
 
@@ -245,8 +258,21 @@ public class OrderServiceImpl implements OrderService {
 
         OrderStatus oldStatus = order.getStatus();
 
-        // Nếu admin chuyển sang CANCELLED và trước đó chưa hủy -> hoàn lại tồn kho và giảm soldCount
-        if (newStatus == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
+        // 1. Tính lũy đẳng (Idempotent): nếu trạng thái không đổi, trả về kết quả ngay
+        if (newStatus == oldStatus) {
+            return mapToDTO(order);
+        }
+
+        // 2. Kiểm tra tính hợp lệ qua State Machine
+        Set<OrderStatus> allowedTransitions = TRANSITIONS.getOrDefault(oldStatus, Set.of());
+        if (!allowedTransitions.contains(newStatus)) {
+            throw new BadRequestException("Không thể chuyển đơn hàng từ trạng thái " + oldStatus + " sang " + newStatus);
+        }
+
+        // 3. Hoàn lại tồn kho và giảm soldCount nếu chuyển sang CANCELLED hoặc RETURNED
+        boolean isReversingStock = (newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED)
+                && (oldStatus != OrderStatus.CANCELLED && oldStatus != OrderStatus.RETURNED);
+        if (isReversingStock) {
             for (OrderItem oi : order.getItems()) {
                 Book book = bookRepository.findByIdWithLock(oi.getBook().getId()).orElse(null);
                 if (book != null) {
@@ -258,9 +284,12 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        // Nếu giao hàng thành công (DELIVERED) và là COD -> cập nhật đã thanh toán
+        // 4. Cập nhật trạng thái thanh toán tương ứng
         if (newStatus == OrderStatus.DELIVERED && order.getPaymentMethod() == PaymentMethod.COD) {
             order.setPaymentStatus(PaymentStatus.PAID);
+        } else if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED)
+                && order.getPaymentStatus() == PaymentStatus.PAID) {
+            order.setPaymentStatus(PaymentStatus.REFUNDED);
         }
 
         order.setStatus(newStatus);

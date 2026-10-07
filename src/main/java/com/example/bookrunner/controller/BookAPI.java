@@ -4,6 +4,7 @@ import com.example.bookrunner.dto.common.ApiResponse;
 import com.example.bookrunner.dto.request.BookRequestDTO;
 import com.example.bookrunner.dto.response.BookResponseDTO;
 import com.example.bookrunner.service.BookService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -43,7 +44,7 @@ public class BookAPI {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> addBook(@RequestBody BookRequestDTO bookRequestDTO) {
+    public ResponseEntity<ApiResponse<Void>> addBook(@Valid @RequestBody BookRequestDTO bookRequestDTO) {
         bookService.createBook(bookRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Thêm sách mới thành công", null));
     }
@@ -51,7 +52,7 @@ public class BookAPI {
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> updateBook(@PathVariable Long id,
-            @RequestBody BookRequestDTO bookRequestDTO) {
+            @Valid @RequestBody BookRequestDTO bookRequestDTO) {
         bookService.updateBook(id, bookRequestDTO);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin thành công", null));
     }
@@ -60,6 +61,13 @@ public class BookAPI {
     @DeleteMapping
     public ResponseEntity<ApiResponse<Void>> deleteBook(@RequestBody List<Long> ids) {
         bookService.deleteBook(ids);
-        return ResponseEntity.ok(ApiResponse.success("Xóa sách thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Ngừng kinh doanh sách thành công", null));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/restore")
+    public ResponseEntity<ApiResponse<Void>> restoreBook(@RequestBody List<Long> ids) {
+        bookService.restoreBook(ids);
+        return ResponseEntity.ok(ApiResponse.success("Khôi phục kinh doanh sách thành công", null));
     }
 }

@@ -113,41 +113,25 @@ public class GlobalExceptionHandler {
 
         // Exception xử lý field unique bị trùng
         @ExceptionHandler(DuplicateUniqueFieldException.class)
-        public ResponseEntity<Map<String, Object>> handleDuplicate(DuplicateUniqueFieldException die) {
-                Map<String, Object> errorDetails = Map.of(
-                                "code", "DUPLICATE_FIELD",
-                                "message", die.getMessage());
-
-                Map<String, Object> responseBody = Map.of(
-                                "success", false,
-                                "error", errorDetails);
-                return new ResponseEntity<>(responseBody, HttpStatus.CONFLICT);
+        public ResponseEntity<ApiResponse<Void>> handleDuplicate(DuplicateUniqueFieldException die) {
+                log.warn("Duplicate field: {}", die.getMessage());
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.error(die.getMessage()));
         }
 
         // Exception xử lý dữ liệu không tồn tại
         @ExceptionHandler(ItemNotFoundException.class)
-        public ResponseEntity<Map<String, Object>> handleBookNotFoundException(ItemNotFoundException bnfe) {
-                Map<String, Object> errorDetails = Map.of(
-                                "code", "ITEM_NOT_FOUND",
-                                "message", bnfe.getMessage());
-
-                Map<String, Object> responseBody = Map.of(
-                                "success", false,
-                                "error", errorDetails);
-                return new ResponseEntity<>(responseBody, HttpStatus.NOT_FOUND);
+        public ResponseEntity<ApiResponse<Void>> handleBookNotFoundException(ItemNotFoundException bnfe) {
+                log.warn("Item not found: {}", bnfe.getMessage());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body(ApiResponse.error(bnfe.getMessage()));
         }
 
         // Exception xử lý nhập thiếu field
         @ExceptionHandler(FieldRequiredException.class)
-        public ResponseEntity<Map<String, Object>> handleFieldRequiredException(FieldRequiredException fre) {
-                Map<String, Object> errorDetails = Map.of(
-                                "code", "FIELD_REQUIRED",
-                                "message", fre.getMessage());
-
-                Map<String, Object> responseBody = Map.of(
-                                "success", false,
-                                "error", errorDetails);
-                return new ResponseEntity<>(responseBody, HttpStatus.BAD_REQUEST);
+        public ResponseEntity<ApiResponse<Void>> handleFieldRequiredException(FieldRequiredException fre) {
+                log.warn("Field required: {}", fre.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(fre.getMessage()));
         }
-
 }
