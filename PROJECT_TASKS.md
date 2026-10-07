@@ -9,8 +9,8 @@
 
 ```
 [Giai đoạn 1: Khảo sát & Data Modeling] ──────────► [100% HOÀN THÀNH]
-[Giai đoạn 2: Backend Core (E-Commerce)] ──────────► [ 95% HOÀN THÀNH] (Auth, Catalog, Cart, Order, User, Admin: 100%)
-[Giai đoạn 3: Recommender System (ML/FastAPI)] ────► [ 20% HOÀN THÀNH] (Schema DB, Interaction BUY Tracking sẵn sàng)
+[Giai đoạn 2: Backend Core (E-Commerce)] ──────────► [ 98% HOÀN THÀNH] (Auth, Catalog, Cart, Order, User, Review, Stats, isFeatured: 100% | Còn lại: VNPay)
+[Giai đoạn 3: Recommender System (ML/FastAPI)] ────► [ 25% HOÀN THÀNH] (Schema DB, Interaction BUY & RATING Tracking sẵn sàng)
 [Giai đoạn 4: Frontend Web UI/UX] ─────────────────► [ 92% HOÀN THÀNH] (13 Trang UI, Cart Adapter, Auth/Order Sync)
 [Giai đoạn 5: Redis Caching & Tối ưu] ─────────────► [ 25% HOÀN THÀNH] (Config Redis)
 [Giai đoạn 6: Đánh giá, Load Test & DevOps] ────────► [  0% CHƯA BẮT ĐẦU]
@@ -107,37 +107,71 @@
 - [x] **Gỡ bỏ ghi chú TODO cũ:** Cập nhật `adminApi.js` gỡ bỏ ghi chú cũ về User Management.
 - [x] **Tạo kế hoạch công việc Frontend:** Lưu tại [`FRONTEND_TASKS.md`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/Front_End/FRONTEND_TASKS.md).
 
+### 1.10. Sửa Lỗi Nghiệp Vụ, Toàn Vẹn Dữ Liệu & Soft Delete Sách - 100% Hoàn Thành
+- [x] Sửa lỗi kiểm tra trùng lặp ISBN khi cập nhật (`existsByIsbnAndIdNot`), không còn bị 409 khi lưu chính mình.
+- [x] Gỡ bỏ `CascadeType.ALL` ở quan hệ `Category -> Book`, chặn xóa danh mục khi đang có sách (`existsByCategoryIdIn`).
+- [x] Hoàn thiện State Machine khép kín (`TRANSITIONS`) cho Đơn hàng, bảo đảm tính lũy đẳng (Idempotent), tự động hoàn tồn kho/doanh số và đồng bộ trạng thái thanh toán (`PaymentStatus`).
+- [x] Chuyển xóa sách sang Bulk Soft-Delete (`active = false`) với `@Modifying(clearAutomatically = true, flushAutomatically = true)`. Bổ sung API `PATCH /api/v1/books/restore` khôi phục sách.
+- [x] Đồng bộ kiểm tra cờ `active` trên toàn hệ thống (chặn thêm sách ngừng kinh doanh vào giỏ hàng).
+- [x] Chuẩn hóa toàn bộ phản hồi lỗi trong `GlobalExceptionHandler` về chuẩn `ApiResponse<Void>`.
+
+### 1.11. Lọc Sách Nổi Bật (`isFeatured`) - 100% Hoàn Thành
+- [x] Thêm `@RequestParam(required = false) Boolean isFeatured` tại `GET /api/v1/books` (`BookAPI.java`).
+- [x] Tích hợp `:isFeatured` trong custom query và countQuery của `BookRepository.searchAndFilterBooks`.
+- [x] Cập nhật `BookService` và `BookServiceImpl` xử lý bộ lọc `isFeatured`.
+
+### 1.12. Phân Hệ Đánh Giá & Bình Luận Sách (Review Subsystem) - 100% Hoàn Thành
+- [x] Tạo đầy đủ DTOs: `CreateReviewRequest`, `UpdateReviewRequest`, `ReviewResponseDTO`, `CanReviewResponseDTO`.
+- [x] Xây dựng `ReviewService` & `ReviewServiceImpl`:
+  - [x] Kiểm tra điều kiện: chỉ cho phép đánh giá nếu user đã mua sách và đơn hàng ở trạng thái `DELIVERED` (`OrderRepository.hasUserPurchasedBookAndDelivered`).
+  - [x] Ràng buộc mỗi user chỉ được đánh giá 1 lần trên mỗi cuốn sách (`existsByUserIdAndBookId`).
+  - [x] Tự động tính toán lại `averageRating` và `totalReviews` trên entity `Book`.
+  - [x] Tự động ghi nhận tương tác `InteractionType.RATING` (trọng số theo số sao đánh giá) vào `user_book_interactions` phục vụ RecSys.
+  - [x] Hỗ trợ sửa đánh giá và xóa đánh giá (phân quyền chủ sở hữu hoặc Admin).
+- [x] Xây dựng `ReviewController` (`/api/v1/books/{bookId}/reviews`, `/api/v1/books/{bookId}/can-review`, `/api/v1/reviews/{id}`).
+- [x] Cấu hình Security trong `SecurityConfig.java`.
+- [x] Bộ Unit Tests `ReviewServiceTest` (100% Passed).
+
+### 1.13. Phân Hệ Báo Cáo & Thống Kê Quản Trị (Admin Dashboard Stats) - 100% Hoàn Thành
+- [x] Tạo DTOs: `DashboardStatsResponseDTO`, `RevenueChartDTO`, `BestSellerStatDTO`.
+- [x] Bổ sung custom queries:
+  - `OrderRepository`: `sumTotalRevenue()` (tổng doanh thu các đơn DELIVERED), `getMonthlyRevenueByYear(year)` (doanh thu theo tháng).
+  - `BookRepository`: `countByActiveTrue()` (tổng đầu sách đang bán), `findTopBestSellers(pageable)` (sách bán chạy theo soldCount).
+- [x] Xây dựng `AdminStatsService` & `AdminStatsServiceImpl`: Tự động điền đủ 12 tháng (T1 đến T12) cho biểu đồ doanh thu.
+- [x] Xây dựng `AdminStatsController` (`GET /api/v1/admin/stats`, `GET /api/v1/admin/stats/revenue`, `GET /api/v1/admin/stats/best-sellers`).
+- [x] Bộ Unit Tests `AdminStatsServiceTest` (100% Passed).
+
 ---
 
 ## 🚀 PHẦN 2: NHỮNG CÔNG VIỆC CẦN THỰC HIỆN TIẾP THEO (TODO TASKS)
 
 ### 📌 Giai Đoạn 1: Hoàn Thiện Các API E-Commerce Cốt Lõi Còn Lại
 
-#### Task 1: Bổ Sung Tham Số Lọc Sách Nổi Bật (`isFeatured`)
-- [ ] Cập nhật `BookAPI.java`: Thêm `@RequestParam(required = false) Boolean isFeatured` vào endpoint `GET /api/v1/books`.
-- [ ] Cập nhật `BookServiceImpl.java`: Nếu `isFeatured != null`, lọc sách theo `isFeatured` kết hợp với các bộ lọc hiện tại.
-- [ ] *Mục đích:* Cho phép Frontend gọi `GET /books?isFeatured=true&size=8` hiển thị đúng mục "Sách nổi bật" ở Trang chủ.
+#### Task 1: Bổ Sung Tham Số Lọc Sách Nổi Bật (`isFeatured`) - ✅ [ĐÃ HOÀN THÀNH Ở BACKEND]
+- [x] Cập nhật `BookAPI.java`: Thêm `@RequestParam(required = false) Boolean isFeatured` vào endpoint `GET /api/v1/books`.
+- [x] Cập nhật `BookServiceImpl.java`: Lọc sách theo `isFeatured` kết hợp với các bộ lọc hiện tại.
+- [x] Cập nhật `BookRepository.java`: Bổ sung tham số vào truy vấn lọc và đếm.
 
-#### Task 2: Phân Hệ Đánh Giá & Bình Luận (Review Module)
-- [ ] Tạo các DTOs: `CreateReviewRequest`, `ReviewResponseDTO`.
-- [ ] Viết `ReviewService` & `ReviewServiceImpl`:
-  - [ ] `createReview(Long userId, Long bookId, CreateReviewRequest request)`: Người dùng đánh giá 1-5 sao kèm nhận xét.
-  - [ ] Ràng buộc: Mỗi user chỉ được đánh giá 1 lần trên mỗi cuốn sách.
-  - [ ] Kiểm tra điều kiện: User phải có đơn hàng đã giao thành công (`DELIVERED`) chứa cuốn sách đó mới được review.
-  - [ ] Tự động tính toán lại `averageRating` và `totalReviews` trong bảng `books`.
-  - [ ] Tự động ghi nhận interaction `RATING` vào bảng `user_book_interactions`.
-  - [ ] `getReviewsByBook(Long bookId, Pageable pageable)`: Lấy danh sách review của sách.
-- [ ] Viết `ReviewController` (`/api/v1/books/{bookId}/reviews`, `/api/v1/reviews/{id}`).
-- [ ] Chuyển Frontend `reviewApi.js` từ mock fallback sang gọi API thật.
+#### Task 2: Phân Hệ Đánh Giá & Bình Luận (Review Module) - ✅ [ĐÃ HOÀN THÀNH Ở BACKEND]
+- [x] Tạo các DTOs: `CreateReviewRequest`, `UpdateReviewRequest`, `ReviewResponseDTO`, `CanReviewResponseDTO`.
+- [x] Viết `ReviewService` & `ReviewServiceImpl`:
+  - [x] `createReview(Long userId, Long bookId, CreateReviewRequest request)`: Người dùng đánh giá 1-5 sao kèm nhận xét.
+  - [x] Ràng buộc: Mỗi user chỉ được đánh giá 1 lần trên mỗi cuốn sách.
+  - [x] Kiểm tra điều kiện: User phải có đơn hàng đã giao thành công (`DELIVERED`) chứa cuốn sách đó mới được review.
+  - [x] Tự động tính toán lại `averageRating` và `totalReviews` trong bảng `books`.
+  - [x] Tự động ghi nhận interaction `RATING` vào bảng `user_book_interactions`.
+  - [x] `getReviewsByBook(Long bookId, Pageable pageable)`: Lấy danh sách review của sách.
+- [x] Viết `ReviewController` (`/api/v1/books/{bookId}/reviews`, `/api/v1/books/{bookId}/can-review`, `/api/v1/reviews/{id}`).
+- [ ] Chuyển Frontend `reviewApi.js` từ mock fallback sang gọi API thật (sẵn sàng kết nối).
 
-#### Task 3: Phân Hệ Báo Cáo & Thống Kê Dashboard Admin (Stats Module)
-- [ ] Viết `AdminStatsController` (`/api/v1/admin/stats/**`):
-  - [ ] `GET /api/v1/admin/stats`: Tổng doanh thu, tổng số đơn hàng, tổng số người dùng, tổng số đầu sách.
-  - [ ] `GET /api/v1/admin/stats/revenue`: Doanh thu theo tháng phục vụ biểu đồ LineChart.
-  - [ ] `GET /api/v1/admin/stats/best-sellers`: Top sách bán chạy nhất phục vụ biểu đồ BarChart.
-- [ ] Chuyển Frontend `DashboardPage.jsx` từ mock data sang gọi API thật.
+#### Task 3: Phân Hệ Báo Cáo & Thống Kê Dashboard Admin (Stats Module) - ✅ [ĐÃ HOÀN THÀNH Ở BACKEND]
+- [x] Viết `AdminStatsController` (`/api/v1/admin/stats/**`):
+  - [x] `GET /api/v1/admin/stats`: Tổng doanh thu, tổng số đơn hàng, tổng số người dùng, tổng số đầu sách.
+  - [x] `GET /api/v1/admin/stats/revenue`: Doanh thu theo tháng phục vụ biểu đồ LineChart.
+  - [x] `GET /api/v1/admin/stats/best-sellers`: Top sách bán chạy nhất phục vụ biểu đồ BarChart.
+- [ ] Chuyển Frontend `DashboardPage.jsx` từ mock data sang gọi API thật (sẵn sàng kết nối).
 
-#### Task 4: Tích Hợp Cổng Thanh Toán VNPay Sandbox
+#### Task 4: Tích Hợp Cổng Thanh Toán VNPay Sandbox - ⏳ [CẦN THỰC HIỆN TIẾP THEO]
 - [ ] Tạo file cấu hình `VNPayConfig.java` (chứa `vnp_TmnCode`, `vnp_HashSecret`, `vnp_Url`, `vnp_ReturnUrl`).
 - [ ] Xây dựng tiện ích tính toán mã băm an toàn HMAC-SHA512.
 - [ ] Tạo API `POST /api/v1/payments/vnpay/create-url`: Nhận `orderId`, sinh URL redirect sang cổng VNPay Sandbox.

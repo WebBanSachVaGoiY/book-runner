@@ -41,6 +41,7 @@ public class BookServiceImpl implements BookService {
     @Transactional(readOnly = true)
     public Page<BookResponseDTO> findAll(String keyword, Long categoryId,
                                           BigDecimal minPrice, BigDecimal maxPrice,
+                                          Boolean isFeatured,
                                           int page, int size,
                                           String sortBy, String sortDir) {
         // 1. Kiểm tra và chuẩn hóa sortBy và sortDir chống lỗi 500 do sai property
@@ -53,7 +54,7 @@ public class BookServiceImpl implements BookService {
 
         // 3. Gọi repository query kết hợp tìm kiếm + lọc (phân trang tại DB với LEFT JOIN FETCH)
         Page<Book> bookPage = bookRepository.searchAndFilterBooks(
-                keyword, categoryId, minPrice, maxPrice, pageable
+                keyword, categoryId, minPrice, maxPrice, isFeatured, pageable
         );
 
         // 4. Chuyển đổi Page<Book> → Page<BookResponseDTO> an toàn, zero entity exposure

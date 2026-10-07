@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface BookService {
     Page<BookResponseDTO> findAll(String keyword, Long categoryId,
-            BigDecimal minPrice, BigDecimal maxPrice,
+            BigDecimal minPrice, BigDecimal maxPrice, Boolean isFeatured,
             int page, int size,
             String sortBy, String sortDir);
 
