@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -36,16 +35,15 @@ public class BookServiceImpl implements BookService {
     private ModelMapper mapper;
 
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
-            "price", "averageRating", "totalReviews", "createdAt", "soldCount"
-    );
+            "price", "averageRating", "totalReviews", "createdAt", "soldCount");
 
     // Lấy tất cả các sách (có lọc + phân trang)
     @Override
     @Transactional(readOnly = true)
     public Page<BookResponseDTO> findAll(String keyword, Long categoryId,
-                                          BigDecimal minPrice, BigDecimal maxPrice,
-                                          int page, int size,
-                                          String sortBy, String sortDir) {
+            BigDecimal minPrice, BigDecimal maxPrice,
+            int page, int size,
+            String sortBy, String sortDir) {
         // 1. Kiểm tra và chuẩn hóa sortBy và sortDir chống lỗi 500 do sai property
         String validSortBy = (sortBy != null && ALLOWED_SORT_FIELDS.contains(sortBy)) ? sortBy : "createdAt";
         boolean isAsc = "asc".equalsIgnoreCase(sortDir);
@@ -54,12 +52,32 @@ public class BookServiceImpl implements BookService {
         // 2. Tạo Pageable (page 0-indexed trong Spring Data)
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        // 3. Gọi repository query kết hợp tìm kiếm + lọc (phân trang tại DB với LEFT JOIN FETCH)
+        // 3. Gọi repository query kết hợp tìm kiếm + lọc (phân trang tại DB với LEFT
+        // JOIN FETCH)
         Page<Book> bookPage = bookRepository.searchAndFilterBooks(
-                keyword, categoryId, minPrice, maxPrice, pageable
-        );
+                keyword, categoryId, minPrice, maxPrice, pageable);
 
-        // 4. Chuyển đổi Page<Book> → Page<BookResponseDTO> an toàn, zero entity exposure
+        // 4. Chuyển đổi Page<Book> → Page<BookResponseDTO> an toàn, zero entity
+        // exposure
+        return bookPage.map(this::mapToDTO);
+    }
+
+    // Lấy tất cả các sách cho Admin (không lọc active=true)
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BookResponseDTO> findAllForAdmin(String keyword, Long categoryId,
+            BigDecimal minPrice, BigDecimal maxPrice,
+            int page, int size,
+            String sortBy, String sortDir) {
+        String validSortBy = (sortBy != null && ALLOWED_SORT_FIELDS.contains(sortBy)) ? sortBy : "createdAt";
+        boolean isAsc = "asc".equalsIgnoreCase(sortDir);
+        Sort sort = isAsc ? Sort.by(validSortBy).ascending() : Sort.by(validSortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Book> bookPage = bookRepository.searchAndFilterBooksForAdmin(
+                keyword, categoryId, minPrice, maxPrice, pageable);
+
         return bookPage.map(this::mapToDTO);
     }
 
@@ -77,7 +95,8 @@ public class BookServiceImpl implements BookService {
         if (book.getCategory() != null) {
             dto.setCategoryId(book.getCategory().getId());
             dto.setCategoryName(book.getCategory().getName());
-            com.example.bookrunner.dto.CategoryDTO catDTO = mapper.map(book.getCategory(), com.example.bookrunner.dto.CategoryDTO.class);
+            com.example.bookrunner.dto.CategoryDTO catDTO = mapper.map(book.getCategory(),
+                    com.example.bookrunner.dto.CategoryDTO.class);
             dto.setCategory(catDTO);
         }
         return dto;
@@ -120,25 +139,61 @@ public class BookServiceImpl implements BookService {
 
     // Cap nhat thong tin sach
     @Override
+    @Transactional
     public void updateBook(Long id, BookRequestDTO bookRequestDTO) {
-        Optional<Book> updating = bookRepository.findById(id);
-        if (updating.isEmpty())
-            throw new ItemNotFoundException("Sách không tồn tại!");
-        else {
-            Book existingBook = updating.get();
-            // Chỉ cập nhật các field được gửi lên, giữ lại id
-            mapper.map(bookRequestDTO, existingBook);
-            if (bookRepository.findByIsbn(existingBook.getIsbn()).isPresent())
-                throw new DuplicateUniqueFieldException("Mã định danh bị trùng!");
-            if (bookRequestDTO.getCategoryId() != null) {
-                Category category = categoryRepository.findById(bookRequestDTO.getCategoryId())
-                        .orElseThrow(() -> new ItemNotFoundException(
-                                "Category không tồn tại với id: " + bookRequestDTO.getCategoryId()));
-                existingBook.setCategory(category);
-            }
+        Book existingBook = bookRepository.findById(id)
+                .orElseThrow(() -> new ItemNotFoundException("Sách không tồn tại!"));
 
-            bookRepository.save(existingBook);
+        // Kiểm tra ISBN trùng khi đổi ISBN
+        if (bookRequestDTO.getIsbn() != null && !bookRequestDTO.getIsbn().equals(existingBook.getIsbn())) {
+            bookRepository.findByIsbn(bookRequestDTO.getIsbn()).ifPresent(book -> {
+                if (!book.getId().equals(id)) {
+                    throw new DuplicateUniqueFieldException("Mã định danh ISBN bị trùng!");
+                }
+            });
         }
+
+        // Chỉ cập nhật các field không null, giữ nguyên giá trị cũ cho field null
+        if (bookRequestDTO.getTitle() != null)
+            existingBook.setTitle(bookRequestDTO.getTitle());
+        if (bookRequestDTO.getAuthor() != null)
+            existingBook.setAuthor(bookRequestDTO.getAuthor());
+        if (bookRequestDTO.getPublisher() != null)
+            existingBook.setPublisher(bookRequestDTO.getPublisher());
+        if (bookRequestDTO.getPublicationYear() != null)
+            existingBook.setPublicationYear(bookRequestDTO.getPublicationYear());
+        if (bookRequestDTO.getIsbn() != null)
+            existingBook.setIsbn(bookRequestDTO.getIsbn());
+        if (bookRequestDTO.getDescription() != null)
+            existingBook.setDescription(bookRequestDTO.getDescription());
+        if (bookRequestDTO.getPrice() != null)
+            existingBook.setPrice(bookRequestDTO.getPrice());
+        if (bookRequestDTO.getDiscountPrice() != null)
+            existingBook.setDiscountPrice(bookRequestDTO.getDiscountPrice());
+        if (bookRequestDTO.getStockQuantity() != null)
+            existingBook.setStockQuantity(bookRequestDTO.getStockQuantity());
+        if (bookRequestDTO.getCoverImageUrl() != null)
+            existingBook.setCoverImageUrl(bookRequestDTO.getCoverImageUrl());
+        if (bookRequestDTO.getPageCount() != null)
+            existingBook.setPageCount(bookRequestDTO.getPageCount());
+        if (bookRequestDTO.getLanguage() != null)
+            existingBook.setLanguage(bookRequestDTO.getLanguage());
+        if (bookRequestDTO.getIsFeatured() != null)
+            existingBook.setIsFeatured(bookRequestDTO.getIsFeatured());
+        if (bookRequestDTO.getActive() != null)
+            existingBook.setActive(bookRequestDTO.getActive());
+        if (bookRequestDTO.getSoldCount() != null)
+            existingBook.setSoldCount(bookRequestDTO.getSoldCount());
+
+        // Cập nhật category
+        if (bookRequestDTO.getCategoryId() != null) {
+            Category category = categoryRepository.findById(bookRequestDTO.getCategoryId())
+                    .orElseThrow(() -> new ItemNotFoundException(
+                            "Category không tồn tại với id: " + bookRequestDTO.getCategoryId()));
+            existingBook.setCategory(category);
+        }
+
+        bookRepository.save(existingBook);
     }
 
     // Xoa sach theo danh sach id
@@ -156,5 +211,13 @@ public class BookServiceImpl implements BookService {
         book.setIsFeatured(book.getIsFeatured() == null || !book.getIsFeatured());
         Book saved = bookRepository.save(book);
         return mapper.map(saved, BookResponseDTO.class);
+    }
+
+    @Override
+    @Transactional
+    public Page<BookResponseDTO> findBestSellers() {
+        Pageable pageable = PageRequest.of(0, 16, Sort.unsorted());
+        Page<Book> bookPage = bookRepository.findBestSellers(pageable);
+        return bookPage.map(this::mapToDTO);
     }
 }

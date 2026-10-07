@@ -22,23 +22,23 @@ public class AdminUserController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<UserSummaryResponse>>> getAllUsers(
-            @RequestParam(required = false) Role role,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(value = "role", required = false) Role role,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
     ) {
         Page<UserSummaryResponse> users = userService.getAllUsers(role, page, size);
         return ResponseEntity.ok(ApiResponse.success(users));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserSummaryResponse>> getUserById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<UserSummaryResponse>> getUserById(@PathVariable("id") Long id) {
         UserSummaryResponse user = userService.getUserById(id);
         return ResponseEntity.ok(ApiResponse.success(user));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<UserSummaryResponse>> updateUser(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody AdminUpdateUserRequest request
     ) {
         UserSummaryResponse user = userService.updateUser(id, request);
@@ -46,7 +46,7 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{id}/toggle-enabled")
-    public ResponseEntity<ApiResponse<UserSummaryResponse>> toggleUserEnabled(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<UserSummaryResponse>> toggleUserEnabled(@PathVariable("id") Long id) {
         UserSummaryResponse user = userService.toggleUserEnabled(id);
         return ResponseEntity.ok(ApiResponse.success("Thay đổi trạng thái tài khoản thành công", user));
     }

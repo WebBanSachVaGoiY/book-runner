@@ -32,7 +32,7 @@ public class CategoryAPI {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> updateCategory(@PathVariable Long id, @RequestBody CategoryDTO categoryDTO){
+    public ResponseEntity<ApiResponse<Void>> updateCategory(@PathVariable("id") Long id, @RequestBody CategoryDTO categoryDTO){
         categoryService.updateCategory(id, categoryDTO);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật danh mục thành công!", null));
     }

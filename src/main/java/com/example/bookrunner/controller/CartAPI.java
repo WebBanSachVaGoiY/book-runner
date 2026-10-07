@@ -41,7 +41,7 @@ public class CartAPI {
     @PutMapping("/items/{itemId}")
     public ResponseEntity<ApiResponse<CartDTO>> updateCartItemQuantity(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @PathVariable Long itemId,
+            @PathVariable("itemId") Long itemId,
             @Valid @RequestBody UpdateCartItemRequest request) {
         CartDTO updatedCart = cartService.updateCartItemQuantity(
                 customUserDetails.getId(), itemId, request.getQuantity());
@@ -51,7 +51,7 @@ public class CartAPI {
     @DeleteMapping("/items/{itemId}")
     public ResponseEntity<ApiResponse<Void>> removeCartItem(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @PathVariable Long itemId) {
+            @PathVariable("itemId") Long itemId) {
         cartService.removeCartItem(customUserDetails.getId(), itemId);
         return ResponseEntity.ok(ApiResponse.success("Xóa sản phẩm khỏi giỏ hàng thành công", null));
     }

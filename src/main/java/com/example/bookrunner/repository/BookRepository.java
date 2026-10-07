@@ -75,6 +75,30 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             Pageable pageable
     );
 
+    @Query(
+            value = "SELECT b FROM Book b LEFT JOIN FETCH b.category " +
+                    "WHERE (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                    "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
+                    "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
+                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice)",
+            countQuery = "SELECT count(b) FROM Book b " +
+                    "WHERE (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                    "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
+                    "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
+                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice)"
+    )
+    Page<Book> searchAndFilterBooksForAdmin(
+            @Param("keyword") String keyword,
+            @Param("categoryId") Long categoryId,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            Pageable pageable
+    );
+
     @Query("SELECT b FROM Book b JOIN OrderItem oi ON b.id = oi.book.id " +
             "JOIN oi.order o WHERE b.active = true AND o.status != com.example.bookrunner.enums.OrderStatus.CANCELLED " +
             "GROUP BY b.id, b.title, b.author, b.publisher, b.publicationYear, b.isbn, b.description, " +
