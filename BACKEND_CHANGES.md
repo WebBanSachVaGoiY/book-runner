@@ -224,7 +224,7 @@ public ResponseEntity<ApiResponse<Void>> handleBookNotFoundException(ItemNotFoun
 
 ---
 
-## 🧪 4. KẾT QUẢ KIỂM THỬ XÁC MINH
+## 🧪 4. KẾT QUẢ KIỂM THỬ XÁC MINH (ĐỢT 1)
 
 1. **Biên dịch mã nguồn:**
    * Lệnh: `./gradlew compileJava`
@@ -232,3 +232,60 @@ public ResponseEntity<ApiResponse<Void>> handleBookNotFoundException(ItemNotFoun
 2. **Kiểm thử tự động các Service:**
    * Lệnh: `./gradlew test --tests "com.example.bookrunner.service.*"`
    * Kết quả: `BUILD SUCCESSFUL in 17s` (Tất cả unit tests đều Passed 100%).
+
+---
+
+## 🚀 5. BỔ SUNG TÍNH NĂNG ĐỒNG BỘ FRONT-END (isFeatured, REVIEW & ADMIN STATS)
+
+Nhằm đồng bộ hoàn toàn với các màn hình của Front-End React (Home, Book Detail, Admin Dashboard), các phân hệ nghiệp vụ sau đã được triển khai hoàn chỉnh:
+
+### 5.1. Bổ sung tham số lọc `isFeatured` cho API Sách
+* **Files tác động:**
+  * [`BookRepository.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/repository/BookRepository.java): Bổ sung `:isFeatured` vào câu truy vấn và `countQuery` của `searchAndFilterBooks`.
+  * [`BookService.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/service/BookService.java) & [`BookServiceImpl.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/service/impl/BookServiceImpl.java): Thêm tham số `Boolean isFeatured` vào phương thức `findAll`.
+  * [`BookAPI.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/controller/BookAPI.java): Nhận `@RequestParam(required = false) Boolean isFeatured` tại `GET /api/v1/books`.
+
+### 5.2. Phân hệ Review & Đánh giá Sách
+* **DTOs mới:**
+  * `CreateReviewRequest`: Validate `rating` (1-5), `comment` (@Size max 1000), `bookId`.
+  * `UpdateReviewRequest`: Validate `rating` (1-5), `comment`.
+  * `ReviewResponseDTO`: Trả về thông tin đánh giá cùng DTO tóm tắt người dùng (`ReviewUserDTO`).
+  * `CanReviewResponseDTO`: Kiểm tra quyền viết đánh giá (`canReview`, `alreadyReviewed`, `hasPurchased`, `reason`).
+* **Nghiệp vụ Service & Repository:**
+  * [`OrderRepository.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/repository/OrderRepository.java): Bổ sung `hasUserPurchasedBookAndDelivered(userId, bookId)` để xác minh người dùng đã mua sách và đơn hàng ở trạng thái `DELIVERED` mới được phép đánh giá (Admin có quyền bypass).
+  * [`ReviewServiceImpl.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/service/impl/ReviewServiceImpl.java):
+    * Kiểm tra chặn đánh giá trùng lặp (`existsByUserIdAndBookId`).
+    * Tự động tính toán lại `averageRating` và `totalReviews` trên entity `Book` sau mỗi lần thêm/sửa/xóa review.
+    * Ghi nhận tương tác `InteractionType.RATING` với trọng số (weight) vào bảng `user_book_interactions` phục vụ thuật toán Recommendation System.
+* **Controller & Phân quyền:**
+  * [`ReviewController.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/controller/ReviewController.java):
+    * `GET /api/v1/books/{bookId}/reviews`: Lấy danh sách đánh giá phân trang (Public).
+    * `GET /api/v1/books/{bookId}/can-review`: Kiểm tra điều kiện đánh giá (Yêu cầu đăng nhập).
+    * `POST /api/v1/books/{bookId}/reviews`: Tạo đánh giá mới (Yêu cầu đăng nhập).
+    * `PUT /api/v1/reviews/{id}`: Sửa đánh giá của chính mình.
+    * `DELETE /api/v1/reviews/{id}`: Xóa đánh giá (Chủ sở hữu hoặc Admin).
+  * [`SecurityConfig.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/config/SecurityConfig.java): Mở quyền xác thực cho các route đánh giá tương ứng.
+
+### 5.3. Phân hệ Thống kê Quản trị (Admin Dashboard Stats)
+* **DTOs mới:**
+  * `DashboardStatsResponseDTO`: `totalRevenue`, `totalOrders`, `totalUsers`, `totalBooks`.
+  * `RevenueChartDTO`: `month` ("T1".."T12"), `revenue` (BigDecimal).
+  * `BestSellerStatDTO`: `title` (String), `sold` (Integer).
+* **Truy vấn Aggregate:**
+  * [`OrderRepository.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/repository/OrderRepository.java):
+    * `sumTotalRevenue()`: Tính tổng doanh thu từ các đơn hàng `DELIVERED`.
+    * `getMonthlyRevenueByYear(year)`: Nhóm doanh thu các đơn hàng `DELIVERED` theo tháng.
+  * [`BookRepository.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/repository/BookRepository.java):
+    * `countByActiveTrue()`: Đếm tổng đầu sách đang mở bán.
+    * `findTopBestSellers(pageable)`: Lấy danh sách sách bán chạy nhất theo `soldCount`.
+* **Service & Controller:**
+  * [`AdminStatsServiceImpl.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/service/impl/AdminStatsServiceImpl.java): Tự động điền đủ 12 tháng (T1 đến T12) ngay cả khi có tháng doanh thu bằng 0 để Front-End vẽ biểu đồ Recharts mượt mà.
+  * [`AdminStatsController.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/controller/AdminStatsController.java):
+    * `GET /api/v1/admin/stats`: Thống kê tổng quan.
+    * `GET /api/v1/admin/stats/revenue`: Biểu đồ doanh thu 12 tháng.
+    * `GET /api/v1/admin/stats/best-sellers`: Top sách bán chạy nhất (mặc định limit = 10).
+
+### 5.4. Kết quả kiểm thử tự động toàn diện
+* **Biên dịch:** `./gradlew compileJava` $\rightarrow$ `BUILD SUCCESSFUL` (0 lỗi).
+* **Unit Tests:** `./gradlew test --tests "com.example.bookrunner.service.*"` $\rightarrow$ **100% Passed (41/41 tests thành công)**, bao gồm `ReviewServiceTest` và `AdminStatsServiceTest`.
+

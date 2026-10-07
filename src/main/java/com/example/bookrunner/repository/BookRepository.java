@@ -1,5 +1,6 @@
 package com.example.bookrunner.repository;
 
+import com.example.bookrunner.dto.response.BestSellerStatDTO;
 import com.example.bookrunner.model.Book;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
@@ -62,20 +63,23 @@ public interface BookRepository extends JpaRepository<Book, Long> {
                     "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
                     "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
                     "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
-                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice)",
+                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice) " +
+                    "AND (:isFeatured IS NULL OR b.isFeatured = :isFeatured)",
             countQuery = "SELECT count(b) FROM Book b WHERE b.active = true " +
                     "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                     "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                     "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
                     "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
                     "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
-                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice)"
+                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice) " +
+                    "AND (:isFeatured IS NULL OR b.isFeatured = :isFeatured)"
     )
     Page<Book> searchAndFilterBooks(
             @Param("keyword") String keyword,
             @Param("categoryId") Long categoryId,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
+            @Param("isFeatured") Boolean isFeatured,
             Pageable pageable
     );
 
@@ -94,4 +98,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     void updateActiveStatusByIdIn(@Param("ids") List<Long> ids, @Param("active") Boolean active);
 
     void deleteByIdIn(List<Long> ids);
+
+    long countByActiveTrue();
+
+    @Query("SELECT new com.example.bookrunner.dto.response.BestSellerStatDTO(b.title, COALESCE(b.soldCount, 0)) " +
+            "FROM Book b WHERE b.active = true ORDER BY b.soldCount DESC, b.id ASC")
+    List<BestSellerStatDTO> findTopBestSellers(Pageable pageable);
 }

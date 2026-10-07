@@ -93,10 +93,10 @@ class BookServiceTest {
     void findAll_InvalidSort_FallbackToCreatedAt() {
         org.mockito.ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
-        when(bookRepository.searchAndFilterBooks(any(), any(), any(), any(), pageableCaptor.capture()))
+        when(bookRepository.searchAndFilterBooks(any(), any(), any(), any(), any(), pageableCaptor.capture()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(testBook)));
 
-        bookService.findAll(null, null, null, null, 0, 10, "malicious_or_unknown_column", "desc");
+        bookService.findAll(null, null, null, null, null, 0, 10, "malicious_or_unknown_column", "desc");
 
         org.springframework.data.domain.Pageable captured = pageableCaptor.getValue();
         org.springframework.data.domain.Sort.Order order = captured.getSort().getOrderFor("createdAt");
@@ -109,10 +109,10 @@ class BookServiceTest {
     void findAll_ValidSoldCountSort() {
         org.mockito.ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
-        when(bookRepository.searchAndFilterBooks(any(), any(), any(), any(), pageableCaptor.capture()))
+        when(bookRepository.searchAndFilterBooks(any(), any(), any(), any(), any(), pageableCaptor.capture()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(testBook)));
 
-        bookService.findAll(null, null, null, null, 0, 10, "soldCount", "desc");
+        bookService.findAll(null, null, null, null, null, 0, 10, "soldCount", "desc");
 
         org.springframework.data.domain.Pageable captured = pageableCaptor.getValue();
         org.springframework.data.domain.Sort.Order order = captured.getSort().getOrderFor("soldCount");

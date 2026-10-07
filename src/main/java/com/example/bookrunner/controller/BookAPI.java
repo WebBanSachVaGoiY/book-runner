@@ -28,11 +28,12 @@ public class BookAPI {
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Boolean isFeatured,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "16") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
-        Page<BookResponseDTO> books = bookService.findAll(keyword, categoryId, minPrice, maxPrice,
+        Page<BookResponseDTO> books = bookService.findAll(keyword, categoryId, minPrice, maxPrice, isFeatured,
                 page, size, sortBy, sortDir);
         return ResponseEntity.ok(ApiResponse.success(books));
     }
