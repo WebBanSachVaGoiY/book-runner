@@ -2,7 +2,6 @@ package com.example.bookrunner.service;
 
 import com.example.bookrunner.dto.CartDTO;
 import com.example.bookrunner.exception.BadRequestException;
-import com.example.bookrunner.exception.ItemNotFoundException;
 import com.example.bookrunner.model.Book;
 import com.example.bookrunner.model.Cart;
 import com.example.bookrunner.model.CartItem;

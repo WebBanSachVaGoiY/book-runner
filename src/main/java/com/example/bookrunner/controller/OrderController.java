@@ -34,9 +34,9 @@ public class OrderController {
     @GetMapping("/my-orders")
     public ResponseEntity<ApiResponse<Page<OrderResponseDTO>>> getMyOrders(
             @AuthenticationPrincipal CustomUserDetails currentUser,
-            @RequestParam(required = false) OrderStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(value = "status", required = false) OrderStatus status,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
     ) {
         Page<OrderResponseDTO> orders = orderService.getMyOrders(currentUser.getId(), status, page, size);
         return ResponseEntity.ok(ApiResponse.success(orders));
@@ -45,7 +45,7 @@ public class OrderController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<OrderResponseDTO>> getOrderDetail(
             @AuthenticationPrincipal CustomUserDetails currentUser,
-            @PathVariable Long id
+            @PathVariable("id") Long id
     ) {
         boolean isAdmin = currentUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
@@ -56,7 +56,7 @@ public class OrderController {
     @PutMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<OrderResponseDTO>> cancelOrder(
             @AuthenticationPrincipal CustomUserDetails currentUser,
-            @PathVariable Long id
+            @PathVariable("id") Long id
     ) {
         OrderResponseDTO order = orderService.cancelOrder(currentUser.getId(), id);
         return ResponseEntity.ok(ApiResponse.success("Hủy đơn hàng thành công", order));

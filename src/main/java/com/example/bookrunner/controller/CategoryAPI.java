@@ -20,27 +20,29 @@ public class CategoryAPI {
     private final CategoryService categoryService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CategoryDTO>>> findAll(){
+    public ResponseEntity<ApiResponse<List<CategoryDTO>>> findAll() {
         return ResponseEntity.ok(ApiResponse.success(categoryService.findAll()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createCategory(@Valid @RequestBody CategoryDTO categoryDTO){
+    public ResponseEntity<ApiResponse<Void>> createCategory(@Valid @RequestBody CategoryDTO categoryDTO) {
         categoryService.createCategory(categoryDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Thêm danh mục mới thành công!", null));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Thêm danh mục mới thành công!", null));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> updateCategory(@PathVariable Long id, @Valid @RequestBody CategoryDTO categoryDTO){
+    public ResponseEntity<ApiResponse<Void>> updateCategory(@PathVariable Long id,
+            @Valid @RequestBody CategoryDTO categoryDTO) {
         categoryService.updateCategory(id, categoryDTO);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật danh mục thành công!", null));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping
-    public ResponseEntity<ApiResponse<Void>> deleteCategory(@RequestBody List<Long> ids){
+    public ResponseEntity<ApiResponse<Void>> deleteCategory(@RequestBody List<Long> ids) {
         categoryService.deleteByIdIn(ids);
         return ResponseEntity.ok(ApiResponse.success("Xoá danh mục thành công!", null));
     }

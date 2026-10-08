@@ -2,11 +2,9 @@ package com.example.bookrunner.repository;
 
 import com.example.bookrunner.dto.response.BestSellerStatDTO;
 import com.example.bookrunner.model.Book;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,89 +17,109 @@ import java.util.Optional;
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
 
-    Optional<Book> findByIsbn(String isbn);
+        Optional<Book> findByIsbn(String isbn);
 
-    boolean existsByIsbnAndIdNot(String isbn, Long id);
+        boolean existsByIsbnAndIdNot(String isbn, Long id);
 
-    boolean existsByCategoryIdIn(List<Long> categoryIds);
+        boolean existsByCategoryIdIn(List<Long> categoryIds);
 
-    @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.id = :id")
-    Optional<Book> findByIdWithCategory(@Param("id") Long id);
+        @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.id = :id")
+        Optional<Book> findByIdWithCategory(@Param("id") Long id);
 
-    @Query(value = "SELECT * FROM books WHERE id = :id FOR UPDATE", nativeQuery = true)
-    Optional<Book> findByIdWithLock(@Param("id") Long id);
+        @Query(value = "SELECT * FROM books WHERE id = :id FOR UPDATE", nativeQuery = true)
+        Optional<Book> findByIdWithLock(@Param("id") Long id);
 
-    Page<Book> findByActiveTrue(Pageable pageable);
+        Page<Book> findByActiveTrue(Pageable pageable);
 
-    Page<Book> findByCategoryIdAndActiveTrue(Long categoryId, Pageable pageable);
+        Page<Book> findByCategoryIdAndActiveTrue(Long categoryId, Pageable pageable);
 
-    Page<Book> findByCategorySlugAndActiveTrue(String slug, Pageable pageable);
+        Page<Book> findByCategorySlugAndActiveTrue(String slug, Pageable pageable);
 
-    Page<Book> findByIsFeaturedTrueAndActiveTrue(Pageable pageable);
+        Page<Book> findByIsFeaturedTrueAndActiveTrue(Pageable pageable);
 
-    Page<Book> findByActiveTrueOrderByCreatedAtDesc(Pageable pageable);
+        Page<Book> findByActiveTrueOrderByCreatedAtDesc(Pageable pageable);
 
-    Page<Book> findByAuthorAndIdNotAndActiveTrue(String author, Long bookId, Pageable pageable);
+        Page<Book> findByAuthorAndIdNotAndActiveTrue(String author, Long bookId, Pageable pageable);
 
-    Page<Book> findByCategoryIdAndIdNotAndActiveTrue(Long categoryId, Long bookId, Pageable pageable);
+        Page<Book> findByCategoryIdAndIdNotAndActiveTrue(Long categoryId, Long bookId, Pageable pageable);
 
-    Page<Book> findByActiveTrueAndAverageRatingGreaterThanEqualOrderByAverageRatingDesc(
-            Double minRating,
-            Pageable pageable
-    );
+        Page<Book> findByActiveTrueAndAverageRatingGreaterThanEqualOrderByAverageRatingDesc(
+                        Double minRating,
+                        Pageable pageable);
 
-    @Query("SELECT b FROM Book b WHERE b.active = true AND " +
-            "(LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<Book> searchBooks(@Param("keyword") String keyword, Pageable pageable);
+        @Query("SELECT b FROM Book b WHERE b.active = true AND " +
+                        "(LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+        Page<Book> searchBooks(@Param("keyword") String keyword, Pageable pageable);
 
-    @Query(
-            value = "SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.active = true " +
-                    "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-                    "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
-                    "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
-                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice) " +
-                    "AND (:isFeatured IS NULL OR b.isFeatured = :isFeatured)",
-            countQuery = "SELECT count(b) FROM Book b WHERE b.active = true " +
-                    "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-                    "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
-                    "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
-                    "AND (:maxPrice IS NULL OR b.price <= :maxPrice) " +
-                    "AND (:isFeatured IS NULL OR b.isFeatured = :isFeatured)"
-    )
-    Page<Book> searchAndFilterBooks(
-            @Param("keyword") String keyword,
-            @Param("categoryId") Long categoryId,
-            @Param("minPrice") BigDecimal minPrice,
-            @Param("maxPrice") BigDecimal maxPrice,
-            @Param("isFeatured") Boolean isFeatured,
-            Pageable pageable
-    );
+        @Query(value = "SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.active = true " +
+                        "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                        "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                        "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                        "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
+                        "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
+                        "AND (:maxPrice IS NULL OR b.price <= :maxPrice) " +
+                        "AND (:isFeatured IS NULL OR b.isFeatured = :isFeatured)", countQuery = "SELECT count(b) FROM Book b WHERE b.active = true "
+                                        +
+                                        "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+                                        +
+                                        "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                                        "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                                        "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
+                                        "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
+                                        "AND (:maxPrice IS NULL OR b.price <= :maxPrice) " +
+                                        "AND (:isFeatured IS NULL OR b.isFeatured = :isFeatured)")
+        Page<Book> searchAndFilterBooks(
+                        @Param("keyword") String keyword,
+                        @Param("categoryId") Long categoryId,
+                        @Param("minPrice") BigDecimal minPrice,
+                        @Param("maxPrice") BigDecimal maxPrice,
+                        @Param("isFeatured") Boolean isFeatured,
+                        Pageable pageable);
 
-    @Query("SELECT b FROM Book b JOIN OrderItem oi ON b.id = oi.book.id " +
-            "JOIN oi.order o WHERE b.active = true AND o.status != com.example.bookrunner.enums.OrderStatus.CANCELLED " +
-            "GROUP BY b.id, b.title, b.author, b.publisher, b.publicationYear, b.isbn, b.description, " +
-            "b.price, b.discountPrice, b.stockQuantity, b.coverImageUrl, b.pageCount, b.language, " +
-            "b.averageRating, b.totalReviews, b.active, b.isFeatured, b.category, b.createdAt, b.updatedAt " +
-            "ORDER BY SUM(oi.quantity) DESC")
-    Page<Book> findBestSellers(Pageable pageable);
+        @Query(value = "SELECT b FROM Book b LEFT JOIN FETCH b.category " +
+                        "WHERE (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                        "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                        "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                        "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
+                        "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
+                        "AND (:maxPrice IS NULL OR b.price <= :maxPrice)", countQuery = "SELECT count(b) FROM Book b " +
+                                        "WHERE (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+                                        +
+                                        "OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                                        "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                                        "AND (:categoryId IS NULL OR b.category.id = :categoryId) " +
+                                        "AND (:minPrice IS NULL OR b.price >= :minPrice) " +
+                                        "AND (:maxPrice IS NULL OR b.price <= :maxPrice)")
+        Page<Book> searchAndFilterBooksForAdmin(
+                        @Param("keyword") String keyword,
+                        @Param("categoryId") Long categoryId,
+                        @Param("minPrice") BigDecimal minPrice,
+                        @Param("maxPrice") BigDecimal maxPrice,
+                        Pageable pageable);
 
-    List<Book> findAllByIdInAndActiveTrue(List<Long> ids);
+        @Query("SELECT b FROM Book b JOIN OrderItem oi ON b.id = oi.book.id " +
+                        "JOIN oi.order o WHERE b.active = true AND o.status != com.example.bookrunner.enums.OrderStatus.CANCELLED "
+                        +
+                        "GROUP BY b.id, b.title, b.author, b.publisher, b.publicationYear, b.isbn, b.description, " +
+                        "b.price, b.discountPrice, b.stockQuantity, b.coverImageUrl, b.pageCount, b.language, " +
+                        "b.averageRating, b.totalReviews, b.active, b.isFeatured, b.category, b.createdAt, b.updatedAt "
+                        +
+                        "ORDER BY SUM(oi.quantity) DESC")
+        Page<Book> findBestSellers(Pageable pageable);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE Book b SET b.active = :active WHERE b.id IN :ids")
-    void updateActiveStatusByIdIn(@Param("ids") List<Long> ids, @Param("active") Boolean active);
+        List<Book> findAllByIdInAndActiveTrue(List<Long> ids);
 
-    void deleteByIdIn(List<Long> ids);
+        @Modifying(clearAutomatically = true, flushAutomatically = true)
+        @Query("UPDATE Book b SET b.active = :active WHERE b.id IN :ids")
+        void updateActiveStatusByIdIn(@Param("ids") List<Long> ids, @Param("active") Boolean active);
 
-    long countByActiveTrue();
+        void deleteByIdIn(List<Long> ids);
 
-    @Query("SELECT new com.example.bookrunner.dto.response.BestSellerStatDTO(b.title, COALESCE(b.soldCount, 0)) " +
-            "FROM Book b WHERE b.active = true ORDER BY b.soldCount DESC, b.id ASC")
-    List<BestSellerStatDTO> findTopBestSellers(Pageable pageable);
+        long countByActiveTrue();
+
+        @Query("SELECT new com.example.bookrunner.dto.response.BestSellerStatDTO(b.title, COALESCE(b.soldCount, 0)) " +
+                        "FROM Book b WHERE b.active = true ORDER BY b.soldCount DESC, b.id ASC")
+        List<BestSellerStatDTO> findTopBestSellers(Pageable pageable);
 }

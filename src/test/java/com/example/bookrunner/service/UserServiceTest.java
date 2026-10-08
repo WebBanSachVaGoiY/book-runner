@@ -5,7 +5,6 @@ import com.example.bookrunner.dto.request.ChangePasswordRequest;
 import com.example.bookrunner.dto.request.UpdateProfileRequest;
 import com.example.bookrunner.enums.Role;
 import com.example.bookrunner.exception.BadRequestException;
-import com.example.bookrunner.exception.ItemNotFoundException;
 import com.example.bookrunner.model.User;
 import com.example.bookrunner.repository.UserRepository;
 import com.example.bookrunner.service.impl.UserServiceImpl;
@@ -138,7 +137,8 @@ class UserServiceTest {
 
         assertNotNull(response);
         assertFalse(testUser.getEnabled(), "Tài khoản phải chuyển sang vô hiệu hóa");
-        assertEquals(2L, testUser.getTokenVersion(), "tokenVersion phải tăng để vô hiệu hóa token khi tài khoản bị khóa");
+        assertEquals(2L, testUser.getTokenVersion(),
+                "tokenVersion phải tăng để vô hiệu hóa token khi tài khoản bị khóa");
         assertNull(testUser.getRefreshTokenJti(), "refresh token phải bị xóa");
         verify(userRepository, times(1)).save(testUser);
     }

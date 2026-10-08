@@ -24,22 +24,22 @@ public class BookAPI {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<BookResponseDTO>>> getAllBook(
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(required = false) Boolean isFeatured,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "16") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
+            @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
+            @RequestParam(value = "isFeatured", required = false) Boolean isFeatured,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "16") int size,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt") String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = "desc") String sortDir) {
         Page<BookResponseDTO> books = bookService.findAll(keyword, categoryId, minPrice, maxPrice, isFeatured,
                 page, size, sortBy, sortDir);
         return ResponseEntity.ok(ApiResponse.success(books));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<BookResponseDTO>> getBookById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<BookResponseDTO>> getBookById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(ApiResponse.success(bookService.findById(id)));
     }
 

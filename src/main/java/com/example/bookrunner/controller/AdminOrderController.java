@@ -22,9 +22,9 @@ public class AdminOrderController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<OrderResponseDTO>>> getAllOrders(
-            @RequestParam(required = false) OrderStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(value = "status", required = false) OrderStatus status,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
     ) {
         Page<OrderResponseDTO> orders = orderService.getAllOrdersForAdmin(status, page, size);
         return ResponseEntity.ok(ApiResponse.success(orders));
@@ -32,7 +32,7 @@ public class AdminOrderController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<OrderResponseDTO>> updateOrderStatus(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody UpdateOrderStatusRequest request
     ) {
         OrderResponseDTO order = orderService.updateOrderStatusForAdmin(id, request.getStatus());
