@@ -30,13 +30,6 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.error(ex.getMessage()));
         }
 
-        @ExceptionHandler(ResourceNotFoundException.class)
-        public ResponseEntity<ApiResponse<Void>> handleResourceNotFoundException(ResourceNotFoundException ex) {
-                log.warn("Resource not found: {}", ex.getMessage());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                                .body(ApiResponse.error(ex.getMessage()));
-        }
-
         @ExceptionHandler(UsernameNotFoundException.class)
         public ResponseEntity<ApiResponse<Void>> handleUsernameNotFoundException(UsernameNotFoundException ex) {
                 log.warn("Username not found: {}", ex.getMessage());
@@ -77,10 +70,10 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(DataIntegrityViolationException.class)
         public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolationException(
                         DataIntegrityViolationException ex) {
-                log.warn("Xung đột dữ liệu hoặc trùng lặp khóa: {}", ex.getMessage());
+                log.warn("Xung đột dữ liệu hoặc vi phạm ràng buộc toàn vẹn: {}", ex.getMessage());
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                                 .body(ApiResponse.error(
-                                                "Dữ liệu (tên đăng nhập hoặc email) đã tồn tại trong hệ thống."));
+                                                "Dữ liệu vi phạm ràng buộc toàn vẹn hoặc đã tồn tại trong hệ thống."));
         }
 
         @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -104,11 +97,8 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception ex) {
                 log.error("Internal server error: ", ex);
-                String msg = ex.getMessage() != null && !ex.getMessage().isBlank()
-                                ? ex.getMessage()
-                                : "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.";
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(ApiResponse.error(msg));
+                                .body(ApiResponse.error("Đã xảy ra lỗi hệ thống, vui lòng thử lại sau."));
         }
 
         // Exception xử lý field unique bị trùng
@@ -121,7 +111,7 @@ public class GlobalExceptionHandler {
 
         // Exception xử lý dữ liệu không tồn tại
         @ExceptionHandler(ItemNotFoundException.class)
-        public ResponseEntity<ApiResponse<Void>> handleBookNotFoundException(ItemNotFoundException bnfe) {
+        public ResponseEntity<ApiResponse<Void>> handleItemNotFoundException(ItemNotFoundException bnfe) {
                 log.warn("Item not found: {}", bnfe.getMessage());
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                                 .body(ApiResponse.error(bnfe.getMessage()));

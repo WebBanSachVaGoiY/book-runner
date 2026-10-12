@@ -156,6 +156,7 @@ public class UserServiceImpl implements UserService {
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .role(user.getRole())
+                .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

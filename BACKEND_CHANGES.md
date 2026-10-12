@@ -289,3 +289,41 @@ Nhằm đồng bộ hoàn toàn với các màn hình của Front-End React (Hom
 * **Biên dịch:** `./gradlew compileJava` $\rightarrow$ `BUILD SUCCESSFUL` (0 lỗi).
 * **Unit Tests:** `./gradlew test --tests "com.example.bookrunner.service.*"` $\rightarrow$ **100% Passed (41/41 tests thành công)**, bao gồm `ReviewServiceTest` và `AdminStatsServiceTest`.
 
+---
+
+## 💳 6. TÍCH HỢP CỔNG THANH TOÁN VNPAY SANDBOX (ĐỢT 3 - 09/10/2026)
+
+Nhằm cung cấp tùy chọn thanh toán trực tuyến bảo mật bên cạnh hình thức COD truyền thống, phân hệ VNPay Sandbox đã được xây dựng và kiểm thử thành công:
+
+### 6.1. Cấu hình & Bảo mật Chữ ký số HMAC-SHA512
+* **Files:**
+  * [`application.yaml`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/resources/application.yaml): Bổ sung cấu hình `app.payment.vnpay` với Terminal ID, Hash Secret, URL Sandbox và Return URL.
+  * [`VNPayConfig.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/config/VNPayConfig.java): Class nạp cấu hình tự động từ file yaml.
+  * [`VNPayUtil.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/util/VNPayUtil.java):
+    * Tính toán chữ ký số `HmacSHA512` bảo vệ toàn vẹn dữ liệu.
+    * Sắp xếp các tham số theo thứ tự ASCII ($a \rightarrow z$) và mã hóa URL chuẩn.
+    * Trích xuất chính xác địa chỉ IP của Client qua các lớp proxy (`X-Forwarded-For`).
+    * Hàm `verifySignature`: Xác thực chữ ký số trên các kết quả phản hồi của VNPay.
+
+### 6.2. DTOs & Service Nghiệp vụ
+* **DTOs mới:**
+  * `VNPayPaymentResponseDTO`: Chứa `orderId`, `orderCode`, `amount`, `paymentUrl`.
+  * `PaymentCallbackDTO`: Chứa kết quả xác thực giao dịch (`success`, `orderCode`, `transactionNo`, `amount`, `bankCode`, `message`).
+* **Service:**
+  * [`VNPayService.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/service/VNPayService.java) & [`VNPayServiceImpl.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/service/impl/VNPayServiceImpl.java):
+    * `createPaymentUrl`: Kiểm tra quyền sở hữu đơn hàng, chuyển đổi tiền tệ (`amount * 100`), tạo hạn thanh toán 15 phút, ký số HMAC-SHA512 tạo URL redirect sang cổng VNPay.
+    * `processCallback`: Bóc tách và xác thực chữ ký từ URL chuyển hướng; nếu thành công (`00`), cập nhật `paymentStatus = PAID` và `status = CONFIRMED`.
+    * `processIpn`: Xử lý Webhook IPN chạy ngầm từ server VNPay; kiểm tra chữ ký, kiểm tra số tiền khớp với database, bảo đảm tính lũy đẳng (Idempotent - không cập nhật lặp lại nếu đã `PAID`), phản hồi JSON `{"RspCode": "00", "Message": "Confirm Success"}`.
+
+### 6.3. Controller & Phân quyền
+* [`PaymentController.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/controller/PaymentController.java):
+  * `POST /api/v1/payments/vnpay/create-url`: Tạo URL thanh toán (yêu cầu đăng nhập).
+  * `GET /api/v1/payments/vnpay/callback-verify`: Xác thực kết quả giao dịch chuyển hướng (Public).
+  * `GET /api/v1/payments/vnpay/ipn`: Webhook nhận tín hiệu ngầm từ VNPay (Public).
+* [`SecurityConfig.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/config/SecurityConfig.java): Mở quyền `permitAll()` cho `/api/v1/payments/vnpay/ipn` và `/api/v1/payments/vnpay/callback-verify`.
+
+### 6.4. Kết quả kiểm thử tự động
+* [`VNPayServiceTest.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/test/java/com/example/bookrunner/service/VNPayServiceTest.java): Kiểm thử 8 kịch bản (sinh URL, kiểm tra chữ ký, sai số tiền, sai mã đơn, IPN webhook).
+* **Kết quả:** `./gradlew test --tests "com.example.bookrunner.service.*"` $\rightarrow$ **100% Passed (49/49 tests thành công)**.
+
+

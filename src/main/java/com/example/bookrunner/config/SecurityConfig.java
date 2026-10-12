@@ -65,6 +65,13 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh"
                         ).permitAll()
+                        // VNPay Payment: Webhook IPN và Callback Verify công khai cho cổng thanh toán
+                        .requestMatchers(
+                                "/api/v1/payments/vnpay/ipn",
+                                "/api/v1/payments/vnpay/callback-verify"
+                        ).permitAll()
+                        // Kiểm tra quyền đánh giá sách (bắt buộc xác thực)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/*/can-review").authenticated()
                         // Public Catalog Read Endpoints cho khách vãng lai
                         .requestMatchers(HttpMethod.GET, "/api/v1/books", "/api/v1/books/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").permitAll()
@@ -80,6 +87,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/books", "/api/v1/books/**", "/api/v1/categories", "/api/v1/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/books", "/api/v1/books/**", "/api/v1/categories", "/api/v1/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/books", "/api/v1/books/**", "/api/v1/categories", "/api/v1/categories/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/books/**").hasRole("ADMIN")
                         // Admin Endpoints
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         // Mọi endpoint khác (bao gồm /api/v1/auth/me, /api/v1/auth/logout, orders, cart...) bắt buộc xác thực

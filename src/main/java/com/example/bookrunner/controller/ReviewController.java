@@ -35,6 +35,14 @@ public class ReviewController {
     public ResponseEntity<ApiResponse<CanReviewResponseDTO>> canUserReview(
             @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable Long bookId) {
+        if (currentUser == null) {
+            return ResponseEntity.ok(ApiResponse.success(CanReviewResponseDTO.builder()
+                    .canReview(false)
+                    .alreadyReviewed(false)
+                    .hasPurchased(false)
+                    .reason("Vui lòng đăng nhập để đánh giá.")
+                    .build()));
+        }
         CanReviewResponseDTO result = reviewService.canUserReview(currentUser.getId(), bookId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }

@@ -21,5 +21,6 @@ public class UserSummaryResponse {
     private String phone;
     private String address;
     private Role role;
+    private Boolean enabled;
     private LocalDateTime createdAt;
 }
