@@ -326,4 +326,38 @@ Nhằm cung cấp tùy chọn thanh toán trực tuyến bảo mật bên cạnh
 * [`VNPayServiceTest.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/test/java/com/example/bookrunner/service/VNPayServiceTest.java): Kiểm thử 8 kịch bản (sinh URL, kiểm tra chữ ký, sai số tiền, sai mã đơn, IPN webhook).
 * **Kết quả:** `./gradlew test --tests "com.example.bookrunner.service.*"` $\rightarrow$ **100% Passed (49/49 tests thành công)**.
 
+---
+
+## 🎯 7. HỆ THỐNG GHI NHẬN HÀNH VI TƯƠNG TÁC NGƯỜI DÙNG (INTERACTION TRACKING FOR RECSYS - 12/10/2026)
+
+Nhằm thu thập tập dữ liệu ngầm định (Implicit Feedback) phục vụ huấn luyện các mô hình AI/ML Recommender System (Content-Based Filtering & Collaborative Filtering ALS), hệ thống đã hoàn thiện phân hệ Tracking chuẩn Enterprise:
+
+### 7.1. Đánh Index Composite & Toàn vẹn Dữ liệu
+* **File:** [`UserBookInteraction.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/model/UserBookInteraction.java)
+* Bổ sung Composite Index `@Index(name = "idx_user_book_type_created", columnList = "user_id, book_id, interaction_type, created_at")` giúp tối ưu hóa $O(\log N)$ cho các câu truy vấn trích xuất dữ liệu của ETL Pipeline Python.
+* [`UserBookInteractionRepository.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/repository/UserBookInteractionRepository.java): Bổ sung `existsByUserIdAndBookIdAndInteractionTypeAndCreatedAtAfter`.
+
+### 7.2. Cấu hình Bất đồng bộ & Xử lý Ngoại lệ Worker Pool
+* **File:** [`AsyncConfig.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/config/AsyncConfig.java)
+  * Thiết lập `ThreadPoolTaskExecutor` (Bean `interactionTaskExecutor`): `corePoolSize = 4`, `maxPoolSize = 8`, `queueCapacity = 500`, tiền tố thread `InteractionTracker-`.
+  * Cài đặt `RejectedExecutionHandler` theo chính sách `CallerRunsPolicy` ngăn tràn bộ nhớ hoặc rớt event khi lưu lượng tải tăng đột biến.
+  * Cài đặt `AsyncUncaughtExceptionHandler` bắt và ghi log chi tiết mọi ngoại lệ ngầm, loại bỏ nguy cơ "nuốt lỗi âm thầm" của Fire-and-forget.
+
+### 7.3. Atomic In-Memory Debounce, Rate Limiting & Service Nghiệp vụ
+* **Files:** 
+  * [`InteractionLogRequest.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/dto/request/InteractionLogRequest.java): Validate Bean `@NotNull` cho `bookId` và `interactionType`.
+  * [`InteractionService.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/service/InteractionService.java) & [`InteractionServiceImpl.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/service/impl/InteractionServiceImpl.java):
+    * **Atomic Debounce chống Race Condition:** Sử dụng `ConcurrentHashMap.compute()` triệt tiêu hoàn toàn lỗi Race Condition (F5 liên tục/request đồng thời). Cửa sổ Debounce: `VIEW` (15 phút), `ADD_TO_CART` (2 phút).
+    * **In-Memory Rate Limiting:** Giới hạn tối đa 60 requests/phút/user, chặn bot/script spam.
+    * **Bảo vệ toàn vẹn Event:** Chặn đứng thao tác cố tình gửi `BUY` và `RATING` qua endpoint người dùng (hành vi `BUY` chỉ sinh tự động từ `OrderService`/`VNPayService`, `RATING` sinh từ `ReviewService`).
+    * **Kiểm tra trạng thái sách:** Bỏ qua không log cho các cuốn sách đã ngừng kinh doanh (`active = false`).
+
+### 7.4. Controller & Phân quyền
+* [`InteractionController.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/controller/InteractionController.java): Endpoint `POST /api/v1/interactions/log`, nhận diện `@AuthenticationPrincipal CustomUserDetails`, phản hồi nhanh `HTTP 200` và đẩy xử lý ngầm qua `@Async`.
+* [`SecurityConfig.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/main/java/com/example/bookrunner/config/SecurityConfig.java): Khai báo tường minh `.requestMatchers("/api/v1/interactions/**").authenticated()`.
+
+### 7.5. Kết quả kiểm thử Unit Tests
+* [`InteractionServiceTest.java`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/book-runner/src/test/java/com/example/bookrunner/service/InteractionServiceTest.java): Kiểm thử 6 kịch bản (VIEW, ADD_TO_CART, Atomic Debounce, Sách không tồn tại, Sách inactive, Chặn BUY/RATING).
+* **Kết quả:** `./gradlew test --tests "com.example.bookrunner.service.*"` $\rightarrow$ **100% Passed (55/55 tests thành công)**.
+
 

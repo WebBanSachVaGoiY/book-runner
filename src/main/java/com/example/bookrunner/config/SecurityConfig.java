@@ -90,6 +90,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/books/**").hasRole("ADMIN")
                         // Admin Endpoints
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Ghi nhận tương tác người dùng (yêu cầu đăng nhập)
+                        .requestMatchers("/api/v1/interactions/**").authenticated()
                         // Mọi endpoint khác (bao gồm /api/v1/auth/me, /api/v1/auth/logout, orders, cart...) bắt buộc xác thực
                         .anyRequest().authenticated()
                 );

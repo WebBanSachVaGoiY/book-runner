@@ -22,6 +22,9 @@ public interface UserBookInteractionRepository extends JpaRepository<UserBookInt
 
     Boolean existsByUserIdAndBookIdAndInteractionType(Long userId, Long bookId, InteractionType interactionType);
 
+    boolean existsByUserIdAndBookIdAndInteractionTypeAndCreatedAtAfter(
+            Long userId, Long bookId, InteractionType interactionType, java.time.LocalDateTime afterTime);
+
     @Query("SELECT DISTINCT ubi.book.id FROM UserBookInteraction ubi WHERE ubi.user.id = :userId")
     List<Long> findDistinctBookIdsByUserId(@Param("userId") Long userId);
 

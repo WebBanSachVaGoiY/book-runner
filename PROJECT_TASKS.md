@@ -185,11 +185,17 @@
 
 ### 📌 Giai Đoạn 2: Xây Dựng Bộ Thu Thập Dữ Liệu & Pipeline RecSys
 
-#### Task 5: Bộ Thu Thập Hành Vi Người Dùng (Interaction Tracker)
-- [x] Tự động ghi nhận tương tác `BUY` khi đơn hàng thành công (đã hoàn thành trong `OrderServiceImpl`).
-- [ ] Tạo API `POST /api/v1/interactions/log`:
-  - Nhận `bookId` và loại hành vi (`VIEW`, `ADD_TO_CART`).
-  - Sử dụng `@Async` của Spring để ghi vào bảng `user_book_interactions` không làm chậm response của người dùng.
+#### Task 5: Bộ Thu Thập Hành Vi Người Dùng (Interaction Tracker) - ✅ [100% HOÀN THÀNH CẢ BE & FE]
+- [x] Tự động ghi nhận tương tác `BUY` khi đơn hàng thành công (trong `OrderServiceImpl` và `VNPayServiceImpl`).
+- [x] Tự động ghi nhận tương tác `RATING` khi người dùng đánh giá (trong `ReviewServiceImpl`).
+- [x] Tạo API `POST /api/v1/interactions/log`:
+  - [x] Nhận `bookId` và loại hành vi (`VIEW`, `ADD_TO_CART`).
+  - [x] Cấu hình ThreadPool Task Executor bounded (`AsyncConfig.java`), xử lý `AsyncUncaughtExceptionHandler`.
+  - [x] Atomic In-memory Debounce (`ConcurrentHashMap.compute()`) triệt tiêu Race Condition và spam F5.
+  - [x] In-memory Rate Limiting (60 req/phút/user).
+  - [x] Composite Index `(user_id, book_id, interaction_type, created_at)` trên Entity `UserBookInteraction`.
+  - [x] Unit Tests `InteractionServiceTest` (6/6 tests Passed 100%).
+  - [x] Frontend Trigger: `BookDetailPage.jsx` (VIEW - chống StrictMode double invoke), `CartContext.jsx` (ADD_TO_CART - chỉ log khi là sách mới thêm).
 - [ ] Chuẩn bị kịch bản sinh dữ liệu mẫu (**Synthetic Data Seeder**):
   - Viết script Python hoặc SQL nạp tập dữ liệu giả lập (50 users mẫu, 200 cuốn sách, khoảng 3.000 - 10.000 tương tác `VIEW`, `ADD_TO_CART`, `BUY`, `RATING`).
 
