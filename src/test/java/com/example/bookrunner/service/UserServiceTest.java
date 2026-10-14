@@ -66,6 +66,7 @@ class UserServiceTest {
         assertEquals("nguyenvana", response.getUsername());
         assertEquals("vana@example.com", response.getEmail());
         assertEquals("Nguyễn Văn A", response.getFullName());
+        assertTrue(response.getEnabled());
     }
 
     @Test
@@ -136,6 +137,7 @@ class UserServiceTest {
         UserSummaryResponse response = userService.toggleUserEnabled(1L);
 
         assertNotNull(response);
+        assertFalse(response.getEnabled(), "Response DTO phải mang enabled = false");
         assertFalse(testUser.getEnabled(), "Tài khoản phải chuyển sang vô hiệu hóa");
         assertEquals(2L, testUser.getTokenVersion(),
                 "tokenVersion phải tăng để vô hiệu hóa token khi tài khoản bị khóa");

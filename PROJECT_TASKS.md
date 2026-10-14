@@ -169,14 +169,17 @@
   - [x] `GET /api/v1/admin/stats`: Tổng doanh thu, tổng số đơn hàng, tổng số người dùng, tổng số đầu sách.
   - [x] `GET /api/v1/admin/stats/revenue`: Doanh thu theo tháng phục vụ biểu đồ LineChart.
   - [x] `GET /api/v1/admin/stats/best-sellers`: Top sách bán chạy nhất phục vụ biểu đồ BarChart.
-- [ ] Chuyển Frontend `DashboardPage.jsx` từ mock data sang gọi API thật (sẵn sàng kết nối).
+- [x] Chuyển Frontend `DashboardPage.jsx` từ mock data sang gọi API thật (đã hoàn thành).
 
-#### Task 4: Tích Hợp Cổng Thanh Toán VNPay Sandbox - ⏳ [CẦN THỰC HIỆN TIẾP THEO]
-- [ ] Tạo file cấu hình `VNPayConfig.java` (chứa `vnp_TmnCode`, `vnp_HashSecret`, `vnp_Url`, `vnp_ReturnUrl`).
-- [ ] Xây dựng tiện ích tính toán mã băm an toàn HMAC-SHA512.
-- [ ] Tạo API `POST /api/v1/payments/vnpay/create-url`: Nhận `orderId`, sinh URL redirect sang cổng VNPay Sandbox.
-- [ ] Xây dựng endpoint `GET /api/v1/payments/vnpay/callback`: Nhận kết quả người dùng thanh toán xong redirect về giao diện Web.
-- [ ] Xây dựng webhook `GET /api/v1/payments/vnpay/ipn`: Nhận xác thực giao dịch ngầm từ server VNPay, kiểm tra chữ ký checksum và cập nhật `paymentStatus = PAID` cho đơn hàng.
+#### Task 4: Tích Hợp Cổng Thanh Toán VNPay Sandbox - ✅ [100% HOÀN THÀNH CẢ BACKEND & FRONTEND]
+- [x] Tạo file cấu hình `VNPayConfig.java` (chứa `vnp_TmnCode`, `vnp_HashSecret`, `vnp_Url`, `vnp_ReturnUrl`).
+- [x] Xây dựng tiện ích tính toán mã băm an toàn HMAC-SHA512 (`VNPayUtil.java`).
+- [x] Tạo API `POST /api/v1/payments/vnpay/create-url`: Nhận `orderId`, sinh URL redirect sang cổng VNPay Sandbox.
+- [x] Xây dựng endpoint `GET /api/v1/payments/vnpay/callback-verify`: Xác thực kết quả giao dịch và cập nhật đơn hàng.
+- [x] Xây dựng webhook `GET /api/v1/payments/vnpay/ipn`: Nhận xác thực giao dịch ngầm từ server VNPay, kiểm tra chữ ký checksum và cập nhật `paymentStatus = PAID`, `status = CONFIRMED`.
+- [x] Mở quyền truy cập công khai trong `SecurityConfig.java` cho IPN và Callback Verify.
+- [x] Viết bộ Unit Test toàn diện `VNPayServiceTest.java` (8/8 test cases Passed 100%).
+- [x] Tích hợp Frontend: `paymentApi.js`, `CheckoutPage.jsx` tự động redirect sang VNPay, trang kết quả `PaymentResultPage.jsx` tại `/payment/vnpay-return`.
 
 ---
 

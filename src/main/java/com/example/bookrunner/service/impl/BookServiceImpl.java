@@ -225,15 +225,15 @@ public class BookServiceImpl implements BookService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BookResponseDTO toggleFeatured(Long id) {
-        Book book = bookRepository.findById(id)
+        Book book = bookRepository.findByIdWithCategory(id)
                 .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy sách với id: " + id));
         book.setIsFeatured(book.getIsFeatured() == null || !book.getIsFeatured());
         Book saved = bookRepository.save(book);
-        return mapper.map(saved, BookResponseDTO.class);
+        return mapToDTO(saved);
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public Page<BookResponseDTO> findBestSellers() {
         Pageable pageable = PageRequest.of(0, 16, Sort.unsorted());
         Page<Book> bookPage = bookRepository.findBestSellers(pageable);

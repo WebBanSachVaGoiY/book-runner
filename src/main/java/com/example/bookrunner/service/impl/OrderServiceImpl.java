@@ -142,29 +142,32 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // 4. Xóa các sản phẩm đã mua khỏi giỏ hàng của user
-        Optional<Cart> optionalCart = cartRepository.findByUserId(userId);
-        if (optionalCart.isPresent()) {
-            Cart cart = optionalCart.get();
-            if (cart.getItems() != null && !cart.getItems().isEmpty()) {
-                cart.getItems().removeIf(ci -> processedBookIds.contains(ci.getBook().getId()));
-                cartRepository.save(cart);
+        // 4. Xóa các sản phẩm đã mua khỏi giỏ hàng & Ghi nhận tương tác BUY
+        // Với COD: Thực hiện ngay lập tức
+        // Với VNPAY: Tạm giữ trong giỏ và chỉ xóa/ghi nhận khi thanh toán thành công (nếu hủy, đơn không tạo và giỏ vẫn nguyên)
+        if (paymentMethod != PaymentMethod.VNPAY) {
+            Optional<Cart> optionalCart = cartRepository.findByUserId(userId);
+            if (optionalCart.isPresent()) {
+                Cart cart = optionalCart.get();
+                if (cart.getItems() != null && !cart.getItems().isEmpty()) {
+                    cart.getItems().removeIf(ci -> processedBookIds.contains(ci.getBook().getId()));
+                    cartRepository.save(cart);
+                }
             }
-        }
 
-        // 5. Ghi nhận tương tác BUY vào RecSys (user_book_interactions)
-        for (OrderItem oi : savedOrder.getItems()) {
-            try {
-                UserBookInteraction interaction = UserBookInteraction.builder()
-                        .user(user)
-                        .book(oi.getBook())
-                        .interactionType(InteractionType.BUY)
-                        .weight(InteractionType.BUY.getDefaultWeight())
-                        .build();
-                interactionRepository.save(interaction);
-            } catch (Exception e) {
-                log.warn("Không thể lưu interaction BUY cho user {} và book {}: {}",
-                        userId, oi.getBook().getId(), e.getMessage());
+            for (OrderItem oi : savedOrder.getItems()) {
+                try {
+                    UserBookInteraction interaction = UserBookInteraction.builder()
+                            .user(user)
+                            .book(oi.getBook())
+                            .interactionType(InteractionType.BUY)
+                            .weight(InteractionType.BUY.getDefaultWeight())
+                            .build();
+                    interactionRepository.save(interaction);
+                } catch (Exception e) {
+                    log.warn("Không thể lưu interaction BUY cho user {} và book {}: {}",
+                            userId, oi.getBook().getId(), e.getMessage());
+                }
             }
         }
 
@@ -216,15 +219,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Hoàn lại số lượng tồn kho và giảm số lượng bán
-        for (OrderItem oi : order.getItems()) {
-            Book book = bookRepository.findByIdWithLock(oi.getBook().getId()).orElse(null);
-            if (book != null) {
-                book.setStockQuantity(book.getStockQuantity() + oi.getQuantity());
-                int currentSold = book.getSoldCount() != null ? book.getSoldCount() : 0;
-                book.setSoldCount(Math.max(0, currentSold - oi.getQuantity()));
-                bookRepository.save(book);
-            }
-        }
+        reverseStockAndSoldCount(order);
 
         if (order.getPaymentStatus() == PaymentStatus.PAID) {
             order.setPaymentStatus(PaymentStatus.REFUNDED);
@@ -273,15 +268,7 @@ public class OrderServiceImpl implements OrderService {
         boolean isReversingStock = (newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED)
                 && (oldStatus != OrderStatus.CANCELLED && oldStatus != OrderStatus.RETURNED);
         if (isReversingStock) {
-            for (OrderItem oi : order.getItems()) {
-                Book book = bookRepository.findByIdWithLock(oi.getBook().getId()).orElse(null);
-                if (book != null) {
-                    book.setStockQuantity(book.getStockQuantity() + oi.getQuantity());
-                    int currentSold = book.getSoldCount() != null ? book.getSoldCount() : 0;
-                    book.setSoldCount(Math.max(0, currentSold - oi.getQuantity()));
-                    bookRepository.save(book);
-                }
-            }
+            reverseStockAndSoldCount(order);
         }
 
         // 4. Cập nhật trạng thái thanh toán tương ứng
@@ -297,6 +284,21 @@ public class OrderServiceImpl implements OrderService {
 
         log.info("Admin cập nhật trạng thái đơn {}: {} -> {}", order.getOrderCode(), oldStatus, newStatus);
         return mapToDTO(savedOrder);
+    }
+
+    private void reverseStockAndSoldCount(Order order) {
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            return;
+        }
+        for (OrderItem oi : order.getItems()) {
+            Book book = bookRepository.findByIdWithLock(oi.getBook().getId()).orElse(null);
+            if (book != null) {
+                book.setStockQuantity(book.getStockQuantity() + oi.getQuantity());
+                int currentSold = book.getSoldCount() != null ? book.getSoldCount() : 0;
+                book.setSoldCount(Math.max(0, currentSold - oi.getQuantity()));
+                bookRepository.save(book);
+            }
+        }
     }
 
     private OrderResponseDTO mapToDTO(Order order) {

@@ -124,13 +124,15 @@ class BookServiceTest {
     @DisplayName("toggleFeatured - Đảo trạng thái isFeatured thành công")
     void toggleFeatured_Success() {
         testBook.setIsFeatured(false);
-        when(bookRepository.findById(100L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findByIdWithCategory(100L)).thenReturn(Optional.of(testBook));
         when(bookRepository.save(any(Book.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         BookResponseDTO response = bookService.toggleFeatured(100L);
 
         assertNotNull(response);
         assertTrue(response.getIsFeatured());
+        assertEquals(1L, response.getCategoryId());
+        assertEquals("Công nghệ thông tin", response.getCategoryName());
         verify(bookRepository, times(1)).save(testBook);
     }
 }

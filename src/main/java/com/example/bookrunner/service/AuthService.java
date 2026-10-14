@@ -216,6 +216,7 @@ public class AuthService {
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .role(user.getRole())
+                .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

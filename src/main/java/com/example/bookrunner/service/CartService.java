@@ -110,9 +110,13 @@ public class CartService {
         Cart cart = getOrCreateCart(userId);
 
         CartItem item = cart.getItems().stream()
-                .filter(ci -> ci.getId().equals(itemId) || ci.getBook().getId().equals(itemId))
+                .filter(ci -> (ci.getId() != null && ci.getId().equals(itemId)) || ci.getBook().getId().equals(itemId))
                 .findFirst()
                 .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy sản phẩm trong giỏ hàng"));
+
+        if (!Boolean.TRUE.equals(item.getBook().getActive())) {
+            throw new BadRequestException("Sách '" + item.getBook().getTitle() + "' hiện đã ngừng kinh doanh!");
+        }
 
         if (quantity > item.getBook().getStockQuantity()) {
             throw new BadRequestException("Số lượng đặt mua vượt quá tồn kho!");
@@ -127,7 +131,7 @@ public class CartService {
         Cart cart = getOrCreateCart(userId);
 
         CartItem item = cart.getItems().stream()
-                .filter(ci -> ci.getId().equals(itemId) || ci.getBook().getId().equals(itemId))
+                .filter(ci -> (ci.getId() != null && ci.getId().equals(itemId)) || ci.getBook().getId().equals(itemId))
                 .findFirst()
                 .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy sản phẩm nào trong giỏ hàng để xoá!"));
 
