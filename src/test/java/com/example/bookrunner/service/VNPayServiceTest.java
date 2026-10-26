@@ -185,8 +185,8 @@ class VNPayServiceTest {
     }
 
     @Test
-    @DisplayName("processCallback - Khách hàng hủy hoặc thanh toán thất bại thì xóa đơn hàng và hoàn tồn kho")
-    void processCallback_CancelledOrFailed_RollbacksStockAndDeletesOrder() {
+    @DisplayName("processCallback - Khách hàng hủy hoặc thanh toán thất bại thì hủy đơn và hoàn tồn kho (giữ lại đơn)")
+    void processCallback_CancelledOrFailed_RollbacksStockAndCancelsOrder() {
         when(vnPayConfig.getHashSecret()).thenReturn(HASH_SECRET);
         when(orderRepository.findByOrderCode("ORD-1728472912345")).thenReturn(Optional.of(testOrder));
 
@@ -202,13 +202,16 @@ class VNPayServiceTest {
         PaymentCallbackDTO callbackResult = vnPayService.processCallback(params);
 
         assertFalse(callbackResult.isSuccess());
-        assertNull(callbackResult.getOrderId());
+        assertEquals(10L, callbackResult.getOrderId());
         assertEquals("ORD-1728472912345", callbackResult.getOrderCode());
         assertEquals("24", callbackResult.getResponseCode());
         assertTrue(callbackResult.getMessage().contains("hủy giao dịch"));
 
-        // Xác minh đơn hàng bị xóa khỏi DB
-        verify(orderRepository, times(1)).delete(testOrder);
+        // Đơn hàng được GIỮ LẠI (không xóa để bảo toàn lịch sử) và chuyển sang FAILED/CANCELLED
+        assertEquals(PaymentStatus.FAILED, testOrder.getPaymentStatus());
+        assertEquals(OrderStatus.CANCELLED, testOrder.getStatus());
+        verify(orderRepository, never()).delete(any());
+        verify(orderRepository, times(1)).save(testOrder);
     }
 
     @Test

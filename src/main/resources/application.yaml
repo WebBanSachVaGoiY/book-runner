@@ -6,7 +6,7 @@ spring:
     name: book-runner
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/book_runner_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/book_runner_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -21,11 +21,11 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
     open-in-view: false
 
-  # data:
-  #   redis:
-  #     host: ${SPRING_DATA_REDIS_HOST:localhost}
-  #     port: ${SPRING_DATA_REDIS_PORT:6379}
-  #     timeout: 2000ms
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2000ms
 
 # App-specific parameters
 app:
@@ -38,7 +38,13 @@ app:
     user-cold-start-threshold: 5
     item-cold-start-threshold: 5
     default-recommendation-limit: 10
+    max-recommendation-limit: 50
+    # TTL (giờ) cho cache gợi ý cá nhân hoá; các cache khác có TTL cố định trong CacheConfig
     cache-ttl-hours: 2
+    # Base URL của RecSys Microservice (FastAPI) để admin trigger training
+    base-url: ${RECSYS_BASE_URL:http://localhost:8000}
+    training-cron: ${RECSYS_TRAINING_CRON:0 0 2 * * ?}
+    auto-training-enabled: ${RECSYS_AUTO_TRAINING_ENABLED:true}
   payment:
     vnpay:
       tmn-code: ${VNPAY_TMN_CODE:}
@@ -47,3 +53,5 @@ app:
       return-url: ${VNPAY_RETURN_URL:http://localhost:3000/payment/vnpay-return}
       version: "2.1.0"
       command: "pay"
+      # Chu kỳ quét đơn VNPay quá hạn để hoàn tồn kho (mili-giây)
+      expiry-scan-interval-ms: 60000

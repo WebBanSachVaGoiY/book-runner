@@ -23,10 +23,12 @@ import com.example.bookrunner.util.VNPayUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -47,6 +49,9 @@ public class VNPayServiceImpl implements VNPayService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
+    // Thời gian sống của link thanh toán VNPay (khớp vnp_ExpireDate) tính bằng phút
+    private static final long PAYMENT_LINK_TTL_MINUTES = 15;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public VNPayPaymentResponseDTO createPaymentUrl(Long userId, Long orderId, HttpServletRequest request) {
@@ -65,10 +70,9 @@ public class VNPayServiceImpl implements VNPayService {
             throw new BadRequestException("Không thể thanh toán cho đơn hàng đã bị hủy hoặc hoàn trả!");
         }
 
-        // Đảm bảo paymentMethod là VNPAY
+        // Đơn hàng phải dùng phương thức VNPay. Không âm thầm đổi phương thức của đơn COD.
         if (order.getPaymentMethod() != PaymentMethod.VNPAY) {
-            order.setPaymentMethod(PaymentMethod.VNPAY);
-            orderRepository.save(order);
+            throw new BadRequestException("Đơn hàng không sử dụng phương thức thanh toán VNPay.");
         }
 
         // VNPay quy định số tiền phải nhân với 100 (bỏ phần thập phân)
@@ -76,7 +80,7 @@ public class VNPayServiceImpl implements VNPayService {
 
         ZonedDateTime now = ZonedDateTime.now(VN_ZONE);
         String createDate = now.format(DATE_FORMATTER);
-        String expireDate = now.plusMinutes(15).format(DATE_FORMATTER);
+        String expireDate = now.plusMinutes(PAYMENT_LINK_TTL_MINUTES).format(DATE_FORMATTER);
 
         Map<String, String> vnpParams = new HashMap<>();
         vnpParams.put("vnp_Version", vnPayConfig.getVersion());
@@ -160,15 +164,13 @@ public class VNPayServiceImpl implements VNPayService {
                     .build();
         } else {
             // Thanh toán không thành công / Khách hàng hủy:
-            // 1. Hoàn lại số lượng tồn kho đã trừ tạm tính
-            reverseStockAndSoldCount(order);
-            // 2. Xóa đơn hàng khỏi hệ thống (đơn hàng không được tạo)
-            orderRepository.delete(order);
-            log.info("Thanh toán VNPay không thành công (mã {}), đã hoàn tồn kho và không khởi tạo đơn hàng: orderCode={}", responseCode, orderCode);
+            // Hoàn lại tồn kho đã trừ tạm tính và GIỮ LẠI đơn ở trạng thái CANCELLED
+            // (không xóa đơn để bảo toàn lịch sử và đảm bảo tính lũy đẳng với IPN).
+            cancelUnpaidOrder(order, responseCode);
 
             return PaymentCallbackDTO.builder()
                     .success(false)
-                    .orderId(null)
+                    .orderId(order.getId())
                     .orderCode(orderCode)
                     .transactionNo(transactionNo)
                     .amount(amount)
@@ -223,15 +225,22 @@ public class VNPayServiceImpl implements VNPayService {
             return response;
         }
 
+        // 4b. Nếu đơn đã bị hủy do thanh toán thất bại trước đó thì bỏ qua (lũy đẳng)
+        if (order.getPaymentStatus() == PaymentStatus.FAILED
+                || order.getStatus() == OrderStatus.CANCELLED) {
+            log.info("[VNPay IPN] Đơn hàng đã bị hủy trước đó: orderCode={}", orderCode);
+            response.put("RspCode", "00");
+            response.put("Message", "Order already cancelled");
+            return response;
+        }
+
         // 5. Cập nhật trạng thái
         String responseCode = queryParams.get("vnp_ResponseCode");
         if ("00".equals(responseCode)) {
             finalizeSuccessfulPayment(order);
             log.info("[VNPay IPN] Cập nhật thành công đơn hàng sang PAID: orderCode={}", orderCode);
         } else {
-            reverseStockAndSoldCount(order);
-            orderRepository.delete(order);
-            log.info("[VNPay IPN] Giao dịch thất bại (mã {}), đã hoàn tồn kho và không khởi tạo đơn hàng: orderCode={}", responseCode, orderCode);
+            cancelUnpaidOrder(order, responseCode);
         }
 
         response.put("RspCode", "00");
@@ -239,14 +248,55 @@ public class VNPayServiceImpl implements VNPayService {
         return response;
     }
 
-    private void finalizeSuccessfulPayment(Order order) {
-        if (order.getPaymentStatus() != PaymentStatus.PAID) {
-            order.setPaymentStatus(PaymentStatus.PAID);
-            if (order.getStatus() == OrderStatus.PENDING) {
-                order.setStatus(OrderStatus.CONFIRMED);
-            }
-            orderRepository.save(order);
+    /**
+     * Hủy đơn VNPay chưa thanh toán thành công: hoàn tồn kho và chuyển trạng thái sang CANCELLED/FAILED.
+     * <p>
+     * Lũy đẳng (idempotent): nếu đơn đã FAILED hoặc đã CANCELLED thì không hoàn kho lần nữa. Điều này
+     * quan trọng vì VNPay có thể gọi cả Return URL và IPN cho cùng một giao dịch.
+     */
+    private void cancelUnpaidOrder(Order order, String responseCode) {
+        if (order.getPaymentStatus() == PaymentStatus.FAILED
+                || order.getStatus() == OrderStatus.CANCELLED) {
+            return;
         }
+        reverseStockAndSoldCount(order);
+        order.setPaymentStatus(PaymentStatus.FAILED);
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        log.info("Đã hủy đơn VNPay chưa thanh toán (mã {}), hoàn tồn kho: orderCode={}", responseCode,
+                order.getOrderCode());
+    }
+
+    /**
+     * Job định kỳ hủy các đơn VNPay còn PENDING quá hạn thanh toán và hoàn lại tồn kho đã giữ tạm.
+     * Tránh rò rỉ tồn kho khi khách bỏ ngang không quay lại cổng thanh toán (VNPay không gọi callback).
+     */
+    @Scheduled(fixedDelayString = "${app.payment.vnpay.expiry-scan-interval-ms:60000}")
+    @Transactional(rollbackFor = Exception.class)
+    public void expirePendingVnpayOrders() {
+        LocalDateTime deadline = LocalDateTime.now().minusMinutes(PAYMENT_LINK_TTL_MINUTES);
+        List<Order> expiredOrders = orderRepository
+                .findByPaymentMethodAndPaymentStatusAndStatusAndCreatedAtBefore(
+                        PaymentMethod.VNPAY, PaymentStatus.PENDING, OrderStatus.PENDING, deadline);
+        if (expiredOrders.isEmpty()) {
+            return;
+        }
+        for (Order order : expiredOrders) {
+            cancelUnpaidOrder(order, "EXPIRED");
+        }
+        log.info("Đã hủy {} đơn VNPay quá hạn thanh toán và hoàn tồn kho.", expiredOrders.size());
+    }
+
+    private void finalizeSuccessfulPayment(Order order) {
+        // Lũy đẳng: Return Callback và IPN có thể cùng gọi -> tránh xóa giỏ/ghi BUY trùng
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            return;
+        }
+        order.setPaymentStatus(PaymentStatus.PAID);
+        if (order.getStatus() == OrderStatus.PENDING) {
+            order.setStatus(OrderStatus.CONFIRMED);
+        }
+        orderRepository.save(order);
 
         // 1. Xóa các sản phẩm đã mua khỏi giỏ hàng
         try {

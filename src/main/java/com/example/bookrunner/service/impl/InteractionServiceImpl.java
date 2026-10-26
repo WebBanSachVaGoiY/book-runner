@@ -54,13 +54,25 @@ public class InteractionServiceImpl implements InteractionService {
 
     @Async("interactionTaskExecutor")
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void logInteractionAsync(Long userId, InteractionLogRequest request) {
-        logInteraction(userId, request);
+        doLogInteraction(userId, request);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void logInteraction(Long userId, InteractionLogRequest request) {
+        doLogInteraction(userId, request);
+    }
+
+    /**
+     * Logic ghi nhận tương tác dùng chung.
+     * <p>
+     * Tách riêng khỏi các phương thức public để tránh self-invocation: nếu
+     * {@code logInteractionAsync} gọi trực tiếp {@code this.logInteraction(...)} thì
+     * {@code @Transactional} sẽ bị bỏ qua (không đi qua proxy của Spring).
+     */
+    private void doLogInteraction(Long userId, InteractionLogRequest request) {
         if (userId == null || request == null || request.getBookId() == null || request.getInteractionType() == null) {
             log.warn("Bỏ qua log interaction: tham số không hợp lệ (userId={}, request={})", userId, request);
             return;

@@ -2,18 +2,24 @@ package com.example.bookrunner.exception;
 
 import com.example.bookrunner.dto.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.HashMap;
 
@@ -101,6 +107,49 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.error("Đã xảy ra lỗi hệ thống, vui lòng thử lại sau."));
         }
 
+        // Xử lý tham số/đường dẫn sai kiểu (ví dụ: ?page=abc hoặc enum không hợp lệ) -> 400 thay vì 500
+        @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+        public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatch(
+                        MethodArgumentTypeMismatchException ex) {
+                log.warn("Sai kiểu tham số '{}': {}", ex.getName(), ex.getValue());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error("Tham số '" + ex.getName() + "' không hợp lệ: " + ex.getValue()));
+        }
+
+        // Xử lý body JSON hỏng hoặc sai kiểu dữ liệu -> 400
+        @ExceptionHandler(HttpMessageNotReadableException.class)
+        public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+                log.warn("Không đọc được request body: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error("Dữ liệu JSON hoặc kiểu dữ liệu gửi lên không hợp lệ."));
+        }
+
+        // Xử lý thiếu tham số bắt buộc trên query string -> 400
+        @ExceptionHandler(MissingServletRequestParameterException.class)
+        public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameter(
+                        MissingServletRequestParameterException ex) {
+                log.warn("Thiếu tham số bắt buộc: {}", ex.getParameterName());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error("Thiếu tham số bắt buộc: " + ex.getParameterName()));
+        }
+
+        // Xử lý vi phạm ràng buộc @Validated trên tham số phương thức -> 400
+        @ExceptionHandler(ConstraintViolationException.class)
+        public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException ex) {
+                log.warn("Vi phạm ràng buộc dữ liệu: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error("Dữ liệu không hợp lệ: " + ex.getMessage()));
+        }
+
+        // Xử lý gọi sai phương thức HTTP -> 405
+        @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+        public ResponseEntity<ApiResponse<Void>> handleHttpRequestMethodNotSupported(
+                        HttpRequestMethodNotSupportedException ex) {
+                log.warn("Phương thức HTTP không được hỗ trợ: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                                .body(ApiResponse.error("Phương thức HTTP không được hỗ trợ cho endpoint này."));
+        }
+
         // Exception xử lý field unique bị trùng
         @ExceptionHandler(DuplicateUniqueFieldException.class)
         public ResponseEntity<ApiResponse<Void>> handleDuplicate(DuplicateUniqueFieldException die) {
@@ -123,5 +172,14 @@ public class GlobalExceptionHandler {
                 log.warn("Field required: {}", fre.getMessage());
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(ApiResponse.error(fre.getMessage()));
+        }
+
+        // Lỗi khi gọi dịch vụ ngoài (RecSys FastAPI) → 502 Bad Gateway thay vì 500
+        @ExceptionHandler(RestClientException.class)
+        public ResponseEntity<ApiResponse<Void>> handleRestClientException(RestClientException ex) {
+                log.error("Lỗi gọi dịch vụ ngoài: ", ex);
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                                .body(ApiResponse.error(
+                                                "Không kết nối được dịch vụ RecSys. Vui lòng kiểm tra service đã chạy chưa."));
         }
 }

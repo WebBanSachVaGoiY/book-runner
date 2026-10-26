@@ -70,8 +70,8 @@ public class SecurityConfig {
                                 "/api/v1/payments/vnpay/ipn",
                                 "/api/v1/payments/vnpay/callback-verify"
                         ).permitAll()
-                        // Kiểm tra quyền đánh giá sách (bắt buộc xác thực)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/books/*/can-review").authenticated()
+                        // Kiểm tra quyền đánh giá sách (cho phép public để trả về JSON canReview: false cho khách vãng lai)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/*/can-review").permitAll()
                         // Public Catalog Read Endpoints cho khách vãng lai
                         .requestMatchers(HttpMethod.GET, "/api/v1/books", "/api/v1/books/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").permitAll()

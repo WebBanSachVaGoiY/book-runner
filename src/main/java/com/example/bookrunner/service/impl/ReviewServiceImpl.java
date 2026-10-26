@@ -154,6 +154,19 @@ public class ReviewServiceImpl implements ReviewService {
         Review updatedReview = reviewRepository.save(review);
         updateBookRatingStats(review.getBook());
 
+        // Cập nhật lại interaction RATING tương ứng cho RecSys
+        try {
+            interactionRepository.findTopByUserIdAndBookIdAndInteractionTypeOrderByCreatedAtDesc(
+                    review.getUser().getId(), review.getBook().getId(), InteractionType.RATING
+            ).ifPresent(interaction -> {
+                interaction.setWeight((float) request.getRating());
+                interaction.setExplicitRating(request.getRating());
+                interactionRepository.save(interaction);
+            });
+        } catch (Exception e) {
+            log.warn("Không thể cập nhật interaction RATING cho review {}: {}", reviewId, e.getMessage());
+        }
+
         log.info("Người dùng '{}' đã cập nhật đánh giá ID {}", review.getUser().getUsername(), reviewId);
         return mapToDTO(updatedReview);
     }
@@ -168,9 +181,21 @@ public class ReviewServiceImpl implements ReviewService {
             throw new AccessDeniedException("Bạn không có quyền xóa đánh giá này!");
         }
 
+        Long reviewOwnerId = review.getUser().getId();
+        Long bookId = review.getBook().getId();
         Book book = review.getBook();
+
         reviewRepository.delete(review);
         updateBookRatingStats(book);
+
+        // Xóa interaction RATING tương ứng cho RecSys
+        try {
+            interactionRepository.deleteByUserIdAndBookIdAndInteractionType(
+                    reviewOwnerId, bookId, InteractionType.RATING
+            );
+        } catch (Exception e) {
+            log.warn("Không thể xóa interaction RATING cho review {}: {}", reviewId, e.getMessage());
+        }
 
         log.info("Đã xóa đánh giá ID {} bởi user ID {}", reviewId, userId);
     }

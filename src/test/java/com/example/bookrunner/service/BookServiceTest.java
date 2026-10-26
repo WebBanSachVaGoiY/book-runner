@@ -7,6 +7,7 @@ import com.example.bookrunner.model.Category;
 import com.example.bookrunner.repository.BookRepository;
 import com.example.bookrunner.repository.CategoryRepository;
 import com.example.bookrunner.service.impl.BookServiceImpl;
+import com.example.bookrunner.service.mapper.BookMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,12 @@ class BookServiceTest {
 
     @Spy
     private ModelMapper modelMapper = new ModelMapper();
+
+    @Spy
+    private BookMapper bookMapper = new BookMapper(modelMapper);
+
+    @Mock
+    private org.springframework.cache.CacheManager cacheManager;
 
     @InjectMocks
     private BookServiceImpl bookService;

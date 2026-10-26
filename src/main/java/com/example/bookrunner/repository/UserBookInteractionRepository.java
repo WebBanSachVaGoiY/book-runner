@@ -30,4 +30,9 @@ public interface UserBookInteractionRepository extends JpaRepository<UserBookInt
 
     @Query("SELECT ubi.book.id FROM UserBookInteraction ubi WHERE ubi.user.id = :userId ORDER BY ubi.createdAt DESC")
     List<Long> findRecentInteractedBookIdsByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    java.util.Optional<UserBookInteraction> findTopByUserIdAndBookIdAndInteractionTypeOrderByCreatedAtDesc(
+            Long userId, Long bookId, InteractionType interactionType);
+
+    void deleteByUserIdAndBookIdAndInteractionType(Long userId, Long bookId, InteractionType interactionType);
 }

@@ -4,12 +4,15 @@ import com.example.bookrunner.dto.auth.UserSummaryResponse;
 import com.example.bookrunner.dto.common.ApiResponse;
 import com.example.bookrunner.dto.request.AdminUpdateUserRequest;
 import com.example.bookrunner.enums.Role;
+import com.example.bookrunner.exception.BadRequestException;
+import com.example.bookrunner.security.CustomUserDetails;
 import com.example.bookrunner.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -39,14 +42,29 @@ public class AdminUserController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<UserSummaryResponse>> updateUser(
             @PathVariable("id") Long id,
-            @Valid @RequestBody AdminUpdateUserRequest request
+            @Valid @RequestBody AdminUpdateUserRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
+        if (currentUser != null && currentUser.getId().equals(id)) {
+            if (Boolean.FALSE.equals(request.getEnabled())) {
+                throw new BadRequestException("Bạn không thể tự vô hiệu hóa tài khoản quản trị của chính mình!");
+            }
+            if (request.getRole() != null && request.getRole() != Role.ROLE_ADMIN) {
+                throw new BadRequestException("Bạn không thể tự hạ quyền quản trị của chính mình!");
+            }
+        }
         UserSummaryResponse user = userService.updateUser(id, request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin người dùng thành công", user));
     }
 
     @PatchMapping("/{id}/toggle-enabled")
-    public ResponseEntity<ApiResponse<UserSummaryResponse>> toggleUserEnabled(@PathVariable("id") Long id) {
+    public ResponseEntity<ApiResponse<UserSummaryResponse>> toggleUserEnabled(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        if (currentUser != null && currentUser.getId().equals(id)) {
+            throw new BadRequestException("Bạn không thể tự khóa tài khoản quản trị của chính mình!");
+        }
         UserSummaryResponse user = userService.toggleUserEnabled(id);
         return ResponseEntity.ok(ApiResponse.success("Thay đổi trạng thái tài khoản thành công", user));
     }
