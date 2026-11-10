@@ -4,6 +4,7 @@ import com.example.bookrunner.dto.request.CreateReviewRequest;
 import com.example.bookrunner.dto.request.UpdateReviewRequest;
 import com.example.bookrunner.dto.response.CanReviewResponseDTO;
 import com.example.bookrunner.dto.response.ReviewResponseDTO;
+import com.example.bookrunner.enums.Role;
 import com.example.bookrunner.exception.BadRequestException;
 import com.example.bookrunner.model.Book;
 import com.example.bookrunner.model.Review;
@@ -48,6 +49,9 @@ class ReviewServiceTest {
 
     @Mock
     private UserBookInteractionRepository interactionRepository;
+
+    @Mock
+    private RecSysCacheService recSysCacheService;
 
     @Spy
     private ModelMapper modelMapper = new ModelMapper();
@@ -121,7 +125,7 @@ class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("createReview - Tạo đánh giá thành công khi đủ điều kiện")
+    @DisplayName("createReview - Tạo đánh giá thành công khi đủ điều kiện và evict trending cache")
     void createReview_Success() {
         CreateReviewRequest request = new CreateReviewRequest();
         request.setBookId(10L);
@@ -151,6 +155,7 @@ class ReviewServiceTest {
         assertEquals("Sách rất hay!", response.getComment());
         verify(bookRepository).save(testBook);
         verify(interactionRepository).save(any());
+        verify(recSysCacheService, times(1)).evictTrending();
     }
 
     @Test

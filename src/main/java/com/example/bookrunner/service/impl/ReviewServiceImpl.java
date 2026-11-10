@@ -12,7 +12,12 @@ import com.example.bookrunner.model.Book;
 import com.example.bookrunner.model.Review;
 import com.example.bookrunner.model.User;
 import com.example.bookrunner.model.UserBookInteraction;
-import com.example.bookrunner.repository.*;
+import com.example.bookrunner.repository.BookRepository;
+import com.example.bookrunner.repository.OrderRepository;
+import com.example.bookrunner.repository.ReviewRepository;
+import com.example.bookrunner.repository.UserBookInteractionRepository;
+import com.example.bookrunner.repository.UserRepository;
+import com.example.bookrunner.service.RecSysCacheService;
 import com.example.bookrunner.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +38,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final UserBookInteractionRepository interactionRepository;
+    private final RecSysCacheService recSysCacheService;
 
     @Override
     @Transactional(readOnly = true)
@@ -206,6 +212,7 @@ public class ReviewServiceImpl implements ReviewService {
         book.setTotalReviews((int) total);
         book.setAverageRating(avg != null ? Math.round(avg * 10.0) / 10.0 : 0.0);
         bookRepository.save(book);
+        recSysCacheService.evictTrending();
     }
 
     private ReviewResponseDTO mapToDTO(Review review) {

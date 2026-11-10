@@ -53,6 +53,9 @@ class VNPayServiceTest {
     private UserBookInteractionRepository interactionRepository;
 
     @Mock
+    private RecSysCacheService recSysCacheService;
+
+    @Mock
     private HttpServletRequest request;
 
     @InjectMocks
@@ -164,6 +167,7 @@ class VNPayServiceTest {
         assertEquals(PaymentStatus.PAID, testOrder.getPaymentStatus());
         assertEquals(OrderStatus.CONFIRMED, testOrder.getStatus());
         verify(orderRepository, times(1)).save(testOrder);
+        verify(recSysCacheService, times(1)).evictTrending();
     }
 
     @Test
@@ -212,6 +216,7 @@ class VNPayServiceTest {
         assertEquals(OrderStatus.CANCELLED, testOrder.getStatus());
         verify(orderRepository, never()).delete(any());
         verify(orderRepository, times(1)).save(testOrder);
+        verify(recSysCacheService, times(1)).evictTrending();
     }
 
     @Test
@@ -236,6 +241,7 @@ class VNPayServiceTest {
         assertEquals(PaymentStatus.PAID, testOrder.getPaymentStatus());
         assertEquals(OrderStatus.CONFIRMED, testOrder.getStatus());
         verify(orderRepository, times(1)).save(testOrder);
+        verify(recSysCacheService, times(1)).evictTrending();
     }
 
     @Test

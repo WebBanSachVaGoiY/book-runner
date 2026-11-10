@@ -40,7 +40,7 @@ class BookServiceTest {
     private BookMapper bookMapper = new BookMapper(modelMapper);
 
     @Mock
-    private org.springframework.cache.CacheManager cacheManager;
+    private RecSysCacheService recSysCacheService;
 
     @InjectMocks
     private BookServiceImpl bookService;
@@ -128,7 +128,7 @@ class BookServiceTest {
     }
 
     @Test
-    @DisplayName("toggleFeatured - Đảo trạng thái isFeatured thành công")
+    @DisplayName("toggleFeatured - Đảo trạng thái isFeatured thành công và evict cache")
     void toggleFeatured_Success() {
         testBook.setIsFeatured(false);
         when(bookRepository.findByIdWithCategory(100L)).thenReturn(Optional.of(testBook));
@@ -141,5 +141,6 @@ class BookServiceTest {
         assertEquals(1L, response.getCategoryId());
         assertEquals("Công nghệ thông tin", response.getCategoryName());
         verify(bookRepository, times(1)).save(testBook);
+        verify(recSysCacheService, times(1)).evictAllOnBookChange(100L);
     }
 }

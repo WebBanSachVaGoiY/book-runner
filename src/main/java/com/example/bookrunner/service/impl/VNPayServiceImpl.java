@@ -18,6 +18,7 @@ import com.example.bookrunner.repository.BookRepository;
 import com.example.bookrunner.repository.CartRepository;
 import com.example.bookrunner.repository.OrderRepository;
 import com.example.bookrunner.repository.UserBookInteractionRepository;
+import com.example.bookrunner.service.RecSysCacheService;
 import com.example.bookrunner.service.VNPayService;
 import com.example.bookrunner.util.VNPayUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,6 +46,7 @@ public class VNPayServiceImpl implements VNPayService {
     private final BookRepository bookRepository;
     private final CartRepository cartRepository;
     private final UserBookInteractionRepository interactionRepository;
+    private final RecSysCacheService recSysCacheService;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
@@ -263,6 +265,7 @@ public class VNPayServiceImpl implements VNPayService {
         order.setPaymentStatus(PaymentStatus.FAILED);
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
+        recSysCacheService.evictTrending();
         log.info("Đã hủy đơn VNPay chưa thanh toán (mã {}), hoàn tồn kho: orderCode={}", responseCode,
                 order.getOrderCode());
     }
@@ -334,6 +337,8 @@ public class VNPayServiceImpl implements VNPayService {
                 }
             }
         }
+
+        recSysCacheService.evictTrending();
     }
 
     private void reverseStockAndSoldCount(Order order) {

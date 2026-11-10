@@ -99,9 +99,8 @@ public class CacheConfig implements CachingConfigurer {
         }
     }
 
-    private RedisCacheManager buildRedisCacheManager(RedisConnectionFactory connectionFactory) {
+    RedisCacheManager buildRedisCacheManager(RedisConnectionFactory connectionFactory) {
         RedisSerializer<Object> valueSerializer = GenericJacksonJsonRedisSerializer.builder()
-                .enableUnsafeDefaultTyping()
                 .build();
         StringRedisSerializer keySerializer = new StringRedisSerializer();
 
