@@ -13,6 +13,7 @@ import com.example.bookrunner.exception.ItemNotFoundException;
 import com.example.bookrunner.model.*;
 import com.example.bookrunner.repository.*;
 import com.example.bookrunner.service.OrderService;
+import com.example.bookrunner.service.RecSysCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -37,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final CartRepository cartRepository;
     private final UserBookInteractionRepository interactionRepository;
+    private final RecSysCacheService recSysCacheService;
 
     private static final Map<OrderStatus, Set<OrderStatus>> TRANSITIONS = Map.of(
             OrderStatus.PENDING, Set.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
@@ -171,6 +173,8 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
+        recSysCacheService.evictTrending();
+
         log.info("Tạo đơn hàng thành công: orderCode={}, user={}, finalAmount={}",
                 savedOrder.getOrderCode(), user.getUsername(), savedOrder.getFinalAmount());
 
@@ -228,6 +232,8 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         Order updatedOrder = orderRepository.save(order);
 
+        recSysCacheService.evictTrending();
+
         log.info("Hủy đơn hàng thành công: orderCode={}, user={}", order.getOrderCode(), userId);
         return mapToDTO(updatedOrder);
     }
@@ -269,6 +275,7 @@ public class OrderServiceImpl implements OrderService {
                 && (oldStatus != OrderStatus.CANCELLED && oldStatus != OrderStatus.RETURNED);
         if (isReversingStock) {
             reverseStockAndSoldCount(order);
+            recSysCacheService.evictTrending();
         }
 
         // 4. Cập nhật trạng thái thanh toán tương ứng

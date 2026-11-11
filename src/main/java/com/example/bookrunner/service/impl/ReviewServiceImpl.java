@@ -12,7 +12,12 @@ import com.example.bookrunner.model.Book;
 import com.example.bookrunner.model.Review;
 import com.example.bookrunner.model.User;
 import com.example.bookrunner.model.UserBookInteraction;
-import com.example.bookrunner.repository.*;
+import com.example.bookrunner.repository.BookRepository;
+import com.example.bookrunner.repository.OrderRepository;
+import com.example.bookrunner.repository.ReviewRepository;
+import com.example.bookrunner.repository.UserBookInteractionRepository;
+import com.example.bookrunner.repository.UserRepository;
+import com.example.bookrunner.service.RecSysCacheService;
 import com.example.bookrunner.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +38,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final UserBookInteractionRepository interactionRepository;
+    private final RecSysCacheService recSysCacheService;
 
     @Override
     @Transactional(readOnly = true)
@@ -154,6 +160,19 @@ public class ReviewServiceImpl implements ReviewService {
         Review updatedReview = reviewRepository.save(review);
         updateBookRatingStats(review.getBook());
 
+        // Cập nhật lại interaction RATING tương ứng cho RecSys
+        try {
+            interactionRepository.findTopByUserIdAndBookIdAndInteractionTypeOrderByCreatedAtDesc(
+                    review.getUser().getId(), review.getBook().getId(), InteractionType.RATING
+            ).ifPresent(interaction -> {
+                interaction.setWeight((float) request.getRating());
+                interaction.setExplicitRating(request.getRating());
+                interactionRepository.save(interaction);
+            });
+        } catch (Exception e) {
+            log.warn("Không thể cập nhật interaction RATING cho review {}: {}", reviewId, e.getMessage());
+        }
+
         log.info("Người dùng '{}' đã cập nhật đánh giá ID {}", review.getUser().getUsername(), reviewId);
         return mapToDTO(updatedReview);
     }
@@ -168,9 +187,21 @@ public class ReviewServiceImpl implements ReviewService {
             throw new AccessDeniedException("Bạn không có quyền xóa đánh giá này!");
         }
 
+        Long reviewOwnerId = review.getUser().getId();
+        Long bookId = review.getBook().getId();
         Book book = review.getBook();
+
         reviewRepository.delete(review);
         updateBookRatingStats(book);
+
+        // Xóa interaction RATING tương ứng cho RecSys
+        try {
+            interactionRepository.deleteByUserIdAndBookIdAndInteractionType(
+                    reviewOwnerId, bookId, InteractionType.RATING
+            );
+        } catch (Exception e) {
+            log.warn("Không thể xóa interaction RATING cho review {}: {}", reviewId, e.getMessage());
+        }
 
         log.info("Đã xóa đánh giá ID {} bởi user ID {}", reviewId, userId);
     }
@@ -181,6 +212,7 @@ public class ReviewServiceImpl implements ReviewService {
         book.setTotalReviews((int) total);
         book.setAverageRating(avg != null ? Math.round(avg * 10.0) / 10.0 : 0.0);
         bookRepository.save(book);
+        recSysCacheService.evictTrending();
     }
 
     private ReviewResponseDTO mapToDTO(Review review) {

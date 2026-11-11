@@ -7,6 +7,7 @@ import com.example.bookrunner.model.Category;
 import com.example.bookrunner.repository.BookRepository;
 import com.example.bookrunner.repository.CategoryRepository;
 import com.example.bookrunner.service.impl.BookServiceImpl;
+import com.example.bookrunner.service.mapper.BookMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,12 @@ class BookServiceTest {
 
     @Spy
     private ModelMapper modelMapper = new ModelMapper();
+
+    @Spy
+    private BookMapper bookMapper = new BookMapper(modelMapper);
+
+    @Mock
+    private RecSysCacheService recSysCacheService;
 
     @InjectMocks
     private BookServiceImpl bookService;
@@ -121,7 +128,7 @@ class BookServiceTest {
     }
 
     @Test
-    @DisplayName("toggleFeatured - Đảo trạng thái isFeatured thành công")
+    @DisplayName("toggleFeatured - Đảo trạng thái isFeatured thành công và evict cache")
     void toggleFeatured_Success() {
         testBook.setIsFeatured(false);
         when(bookRepository.findByIdWithCategory(100L)).thenReturn(Optional.of(testBook));
@@ -134,5 +141,6 @@ class BookServiceTest {
         assertEquals(1L, response.getCategoryId());
         assertEquals("Công nghệ thông tin", response.getCategoryName());
         verify(bookRepository, times(1)).save(testBook);
+        verify(recSysCacheService, times(1)).evictAllOnBookChange(100L);
     }
 }

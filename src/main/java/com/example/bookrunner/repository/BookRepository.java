@@ -122,4 +122,28 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Query("SELECT new com.example.bookrunner.dto.response.BestSellerStatDTO(b.title, COALESCE(b.soldCount, 0)) " +
                         "FROM Book b WHERE b.active = true ORDER BY b.soldCount DESC, b.id ASC")
         List<BestSellerStatDTO> findTopBestSellers(Pageable pageable);
+
+        // ===== Query phục vụ Recommendation Serving Layer =====
+        // Dùng LEFT JOIN FETCH category để map DTO an toàn (open-in-view=false, category LAZY)
+
+        @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category " +
+                        "WHERE b.active = true AND b.id IN :ids")
+        List<Book> findAllActiveByIdInWithCategory(@Param("ids") List<Long> ids);
+
+        @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category WHERE b.active = true " +
+                        "ORDER BY b.soldCount DESC, b.averageRating DESC, b.id ASC")
+        List<Book> findTrendingWithCategory(Pageable pageable);
+
+        @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category " +
+                        "WHERE b.active = true AND b.averageRating >= :minRating " +
+                        "ORDER BY b.averageRating DESC, b.soldCount DESC, b.id ASC")
+        List<Book> findTopRatedWithCategory(@Param("minRating") Double minRating, Pageable pageable);
+
+        @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category " +
+                        "WHERE b.active = true AND b.category.id = :categoryId AND b.id <> :bookId " +
+                        "ORDER BY b.averageRating DESC, b.soldCount DESC, b.id ASC")
+        List<Book> findByCategoryExcludingWithCategory(
+                        @Param("categoryId") Long categoryId,
+                        @Param("bookId") Long bookId,
+                        Pageable pageable);
 }

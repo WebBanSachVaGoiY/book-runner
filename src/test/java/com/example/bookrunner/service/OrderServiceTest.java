@@ -48,6 +48,9 @@ class OrderServiceTest {
         @Mock
         private UserBookInteractionRepository interactionRepository;
 
+        @Mock
+        private RecSysCacheService recSysCacheService;
+
         @InjectMocks
         private OrderServiceImpl orderService;
 
@@ -117,6 +120,9 @@ class OrderServiceTest {
                                 .save(argThat(interaction -> interaction.getUser().getId().equals(1L) &&
                                                 interaction.getBook().getId().equals(10L) &&
                                                 interaction.getInteractionType() == InteractionType.BUY));
+
+                // Kiểm tra evictTrending được gọi
+                verify(recSysCacheService, times(1)).evictTrending();
         }
 
         @Test
@@ -192,6 +198,7 @@ class OrderServiceTest {
                 // Tồn kho ban đầu là 15, hoàn lại 3 -> 18
                 assertEquals(18, testBook.getStockQuantity());
                 verify(bookRepository, times(1)).save(testBook);
+                verify(recSysCacheService, times(1)).evictTrending();
         }
 
         @Test

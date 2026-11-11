@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: book-runner-test
+
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+    open-in-view: false
+
+  cache:
+    type: none
+
+app:
+  jwt:
+    secret: TestSecretKeyMustBeLongEnoughForJjwtAlgorithm2026BookRunnerTestKey
+    expiration-ms: 3600000
+    refresh-expiration-ms: 7200000
+  recsys:
+    user-cold-start-threshold: 5
+    item-cold-start-threshold: 5
+    default-recommendation-limit: 10
+    max-recommendation-limit: 50
+    cache-ttl-hours: 2
+    base-url: http://localhost:8000
+  payment:
+    vnpay:
+      tmn-code: "TESTTMN"
+      hash-secret: "TESTHASHSECRET"
+      url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+      return-url: "http://localhost:3000/payment/vnpay-return"
+      version: "2.1.0"
+      command: "pay"
+      expiry-scan-interval-ms: 60000

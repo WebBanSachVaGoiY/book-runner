@@ -10,7 +10,10 @@ import com.example.bookrunner.model.Category;
 import com.example.bookrunner.repository.BookRepository;
 import com.example.bookrunner.repository.CategoryRepository;
 import com.example.bookrunner.service.BookService;
+import com.example.bookrunner.service.RecSysCacheService;
+import com.example.bookrunner.service.mapper.BookMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +26,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookServiceImpl implements BookService {
@@ -30,6 +34,8 @@ public class BookServiceImpl implements BookService {
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
     private final ModelMapper mapper;
+    private final BookMapper bookMapper;
+    private final RecSysCacheService recSysCacheService;
 
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "price", "averageRating", "totalReviews", "createdAt", "soldCount");
@@ -49,13 +55,11 @@ public class BookServiceImpl implements BookService {
         // 2. Tạo Pageable (page 0-indexed trong Spring Data)
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        // 3. Gọi repository query kết hợp tìm kiếm + lọc (phân trang tại DB với LEFT
-        // JOIN FETCH)
+        // 3. Gọi repository query kết hợp tìm kiếm + lọc (phân trang tại DB với LEFT JOIN FETCH)
         Page<Book> bookPage = bookRepository.searchAndFilterBooks(
                 keyword, categoryId, minPrice, maxPrice, isFeatured, pageable);
 
-        // 4. Chuyển đổi Page<Book> → Page<BookResponseDTO> an toàn, zero entity
-        // exposure
+        // 4. Chuyển đổi Page<Book> → Page<BookResponseDTO> an toàn, zero entity exposure
         return bookPage.map(this::mapToDTO);
     }
 
@@ -88,15 +92,7 @@ public class BookServiceImpl implements BookService {
     }
 
     private BookResponseDTO mapToDTO(Book book) {
-        BookResponseDTO dto = mapper.map(book, BookResponseDTO.class);
-        if (book.getCategory() != null) {
-            dto.setCategoryId(book.getCategory().getId());
-            dto.setCategoryName(book.getCategory().getName());
-            com.example.bookrunner.dto.CategoryDTO catDTO = mapper.map(book.getCategory(),
-                    com.example.bookrunner.dto.CategoryDTO.class);
-            dto.setCategory(catDTO);
-        }
-        return dto;
+        return bookMapper.toDTO(book);
     }
 
     // Thêm sách
@@ -106,8 +102,7 @@ public class BookServiceImpl implements BookService {
         Book newBook = mapper.map(bookRequestDTO, Book.class);
         newBook.setId(null);
 
-        // Set default values cho các cột NOT NULL (ModelMapper không áp dụng
-        // @Builder.Default)
+        // Set default values cho các cột NOT NULL (ModelMapper không áp dụng @Builder.Default)
         if (newBook.getStockQuantity() == null)
             newBook.setStockQuantity(0);
         if (newBook.getActive() == null)
@@ -141,6 +136,7 @@ public class BookServiceImpl implements BookService {
         }
 
         bookRepository.save(newBook);
+        recSysCacheService.evictTrending();
     }
 
     // Cập nhật thông tin sách
@@ -200,6 +196,7 @@ public class BookServiceImpl implements BookService {
         }
 
         bookRepository.save(existingBook);
+        recSysCacheService.evictAllOnBookChange(id);
     }
 
     // Xóa mềm (soft-delete) sách theo danh sách id
@@ -210,6 +207,7 @@ public class BookServiceImpl implements BookService {
             throw new BadRequestException("Danh sách ID sách cần xóa không được để trống!");
         }
         bookRepository.updateActiveStatusByIdIn(ids, false);
+        recSysCacheService.evictAllOnBookDelete();
     }
 
     // Khôi phục sách đã xóa mềm
@@ -220,6 +218,7 @@ public class BookServiceImpl implements BookService {
             throw new BadRequestException("Danh sách ID sách cần khôi phục không được để trống!");
         }
         bookRepository.updateActiveStatusByIdIn(ids, true);
+        recSysCacheService.evictAllOnBookDelete();
     }
 
     @Override
@@ -229,6 +228,7 @@ public class BookServiceImpl implements BookService {
                 .orElseThrow(() -> new ItemNotFoundException("Không tìm thấy sách với id: " + id));
         book.setIsFeatured(book.getIsFeatured() == null || !book.getIsFeatured());
         Book saved = bookRepository.save(book);
+        recSysCacheService.evictAllOnBookChange(id);
         return mapToDTO(saved);
     }
 

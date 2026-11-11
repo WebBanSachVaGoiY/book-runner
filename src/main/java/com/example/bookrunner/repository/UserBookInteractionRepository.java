@@ -22,9 +22,17 @@ public interface UserBookInteractionRepository extends JpaRepository<UserBookInt
 
     Boolean existsByUserIdAndBookIdAndInteractionType(Long userId, Long bookId, InteractionType interactionType);
 
+    boolean existsByUserIdAndBookIdAndInteractionTypeAndCreatedAtAfter(
+            Long userId, Long bookId, InteractionType interactionType, java.time.LocalDateTime afterTime);
+
     @Query("SELECT DISTINCT ubi.book.id FROM UserBookInteraction ubi WHERE ubi.user.id = :userId")
     List<Long> findDistinctBookIdsByUserId(@Param("userId") Long userId);
 
     @Query("SELECT ubi.book.id FROM UserBookInteraction ubi WHERE ubi.user.id = :userId ORDER BY ubi.createdAt DESC")
     List<Long> findRecentInteractedBookIdsByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    java.util.Optional<UserBookInteraction> findTopByUserIdAndBookIdAndInteractionTypeOrderByCreatedAtDesc(
+            Long userId, Long bookId, InteractionType interactionType);
+
+    void deleteByUserIdAndBookIdAndInteractionType(Long userId, Long bookId, InteractionType interactionType);
 }
